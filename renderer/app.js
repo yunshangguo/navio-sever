@@ -2054,27 +2054,120 @@
     $('#tbClock').textContent = `${d.getMonth() + 1}-${p(d.getDate())} ${WEEK[d.getDay()]} ${hm}`;
   }
 
-  /* ================= 阶段 2：卡片组件（待办 / 日历 / 天气 / 记事本） ================= */
+  /* ================= 阶段 2：卡片组件（待办 / 日历 / 天气 / 记事本）v2 ================= */
   const WIDGET_DEFS = {
     todo: {
-      name: '待办事项', desc: '快速记下要做的事，可关联日期',
+      name: '待办事项', desc: '快速记下要做的事，可关联日期与优先级',
       icon: '<path d="M9 6h12M9 12h12M9 18h12"/><path d="M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2"/>'
     },
     calendar: {
-      name: '日历', desc: '当月月历，有待办的日子标圆点',
+      name: '日历', desc: '月历 + 农历节日，点日期看当天待办',
       icon: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>'
     },
     weather: {
-      name: '天气', desc: '联网获取或手动录入，离线也能显示',
+      name: '天气', desc: '天气图标 / 体感 / 湿度 / 多日预报，离线可手动填',
       icon: '<path d="M6 16a4 4 0 0 1 .6-7.95A6 6 0 0 1 18 10a3.5 3.5 0 0 1 0 7H6z"/>'
     },
     notes: {
-      name: '记事本', desc: '多条笔记，点击即可编辑',
+      name: '记事本', desc: '多条笔记，卡片预览，支持置顶与搜索',
       icon: '<path d="M5 3h11l3 3v15H5zM16 3v3h3M8 11h8M8 15h8"/>'
     }
   };
   const WIDGET_TYPES = ['todo', 'calendar', 'weather', 'notes'];
-  const WG = { show: true, calY: 0, calM: 0, pickedDate: '', busy: false, bound: false };
+  const WG = {
+    show: true, calY: 0, calM: 0, pickedDate: '', busy: false, bound: false,
+    todoFilter: 'active', noteSearch: '', editTodoId: '', cityDraft: ''
+  };
+  const WG_CITIES = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '西安', '南京', '重庆'];
+
+  /* ---------- 农历（1900-2100 精简算法，用于日历节日显示） ---------- */
+  const LUNAR_INFO = [
+    0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+    0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+    0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+    0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+    0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+    0x06ca0,0x0b550,0x15355,0x04da0,0x0a5d0,0x14573,0x052d0,0x0a9a8,0x0e950,0x06aa0,
+    0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+    0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b5a0,0x195a6,
+    0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+    0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,
+    0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+    0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+    0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+    0x05aa0,0x076a3,0x096d0,0x04bd7,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+    0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,
+    0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,
+    0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,
+    0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,
+    0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,
+    0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,
+    0x0d520
+  ];
+  const LUNAR_MONTHS = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+  const LUNAR_DAYS = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十','十一','十二','十三','十四','十五','十六','十七','十八','十九','二十','廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十'];
+  const SOLAR_FEST = { '1-1':'元旦','2-14':'情人节','3-8':'妇女节','3-12':'植树节','4-1':'愚人节','5-1':'劳动节','5-4':'青年节','6-1':'儿童节','7-1':'建党节','8-1':'建军节','9-10':'教师节','10-1':'国庆节','11-11':'双十一','12-24':'平安夜','12-25':'圣诞节' };
+  const LUNAR_FEST = { '1-1':'春节','1-15':'元宵','2-2':'龙抬头','5-5':'端午','7-7':'七夕','7-15':'中元','8-15':'中秋','9-9':'重阳','12-8':'腊八' };
+
+  function lLeapMonth(y) { return LUNAR_INFO[y - 1900] & 0xf; }
+  function lLeapDays(y) { return lLeapMonth(y) ? ((LUNAR_INFO[y - 1900] & 0x10000) ? 30 : 29) : 0; }
+  function lMonthDays(y, m) { return (LUNAR_INFO[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
+  function lYearDays(y) {
+    let sum = 348;
+    for (let i = 0x8000; i > 0x8; i >>= 1) sum += (LUNAR_INFO[y - 1900] & i) ? 1 : 0;
+    return sum + lLeapDays(y);
+  }
+  function solarToLunar(y, m, d) {
+    if (y < 1900 || y > 2100) return null;
+    let offset = Math.floor((Date.UTC(y, m - 1, d) - Date.UTC(1900, 0, 31)) / 86400000);
+    let temp = 0, i;
+    for (i = 1900; i < 2101 && offset > 0; i++) { temp = lYearDays(i); offset -= temp; }
+    if (offset < 0) { offset += temp; i--; }
+    const ly = i, leap = lLeapMonth(ly);
+    let isLeap = false;
+    for (i = 1; i < 13 && offset > 0; i++) {
+      if (leap > 0 && i === leap + 1 && !isLeap) { --i; isLeap = true; temp = lLeapDays(ly); }
+      else { temp = lMonthDays(ly, i); }
+      if (isLeap && i === leap + 1) isLeap = false;
+      if (offset < temp) break;
+      offset -= temp;
+    }
+    if (offset === 0 && leap > 0 && i === leap + 1) {
+      if (isLeap) isLeap = false; else { isLeap = true; --i; }
+    }
+    if (offset < 0) { offset += temp; --i; }
+    return { year: ly, month: i, day: offset + 1, isLeap };
+  }
+  function dayLabel(y, m, d) {
+    const sk = m + '-' + d;
+    if (SOLAR_FEST[sk]) return SOLAR_FEST[sk];
+    const l = solarToLunar(y, m, d);
+    if (!l) return '';
+    const lk = l.month + '-' + l.day;
+    if (!l.isLeap && LUNAR_FEST[lk]) return LUNAR_FEST[lk];
+    if (l.day === 1) return (l.isLeap ? '闰' : '') + LUNAR_MONTHS[l.month - 1] + '月';
+    return LUNAR_DAYS[l.day - 1];
+  }
+
+  /* ---------- 天气图标（按 icon 类型） ---------- */
+  function wgWeatherIcon(type, big) {
+    const cls = big ? 'wg-wico big' : 'wg-wico';
+    const sun = '<circle cx="12" cy="12" r="4.2"/>';
+    const sunRays = '<path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/>';
+    const cloud = '<path d="M6.5 18a4 4 0 0 1 .5-7.96A6 6 0 0 1 18.5 11.5 3.5 3.5 0 0 1 18 18H6.5z"/>';
+    const rain = '<path d="M7 15.5l-1 3M12 15.5l-1 3M17 15.5l-1 3"/>';
+    const snow = '<path d="M8 17h.01M12 18.5h.01M16 17h.01"/>';
+    const fog = '<path d="M5 16h14M7 19h10"/>';
+    const storm = '<path d="M13 14l-3 4h3l-1 3 4-5h-3l1-2z"/>';
+    let inner = cloud;
+    if (type === 'sun') inner = sun + sunRays;
+    else if (type === 'cloud') inner = cloud;
+    else if (type === 'rain') inner = cloud + rain;
+    else if (type === 'snow') inner = cloud + snow;
+    else if (type === 'fog') inner = cloud + fog;
+    else if (type === 'storm') inner = cloud + storm;
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" aria-hidden="true">' + inner + '</svg>';
+  }
 
   function wgShortTime(iso) {
     try {
@@ -2087,98 +2180,169 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  /** 数据层字段 store.normalize 已预留，这里只做兜底与首次播种 */
+  /** 数据层字段 store.normalize 已预留，这里只做兜底、首次播种与旧字段升级 */
   function ensureWidgetState() {
     if (!Array.isArray(S.widgets)) S.widgets = [];
     if (!Array.isArray(S.todos)) S.todos = [];
     if (!Array.isArray(S.notes)) S.notes = [];
+    // 旧数据补默认字段（不覆盖已有值）
+    let upgraded = false;
+    (S.todos || []).forEach((t) => {
+      if (typeof t.priority !== 'number') { t.priority = 0; upgraded = true; }
+    });
+    (S.notes || []).forEach((n) => {
+      if (typeof n.pinned !== 'boolean') { n.pinned = false; upgraded = true; }
+    });
     if (!S.widgets.length) {
       S.widgets = WIDGET_TYPES.map((t, i) => ({ id: uid('w_'), type: t, enabled: true, order: i, data: {} }));
-      scheduleSave();
+      upgraded = true;
     }
+    if (upgraded) scheduleSave();
   }
   function widgetByType(type) {
     return (S.widgets || []).find((w) => w.type === type && w.enabled);
   }
 
-  /* ---------- 各组件内容 ---------- */
+  /* ---------- 待办 ---------- */
   function wgTodoHTML() {
-    const todos = S.todos || [];
-    const undone = todos.filter((t) => !t.done).length;
-    const list = todos.slice(0, 5).map((t) =>
-      `<div class="wg-todo-item ${t.done ? 'done' : ''}">
+    let todos = (S.todos || []).slice();
+    const total = todos.length;
+    const done = todos.filter((t) => t.done).length;
+    const active = total - done;
+    // 优先级高的排前，其余保持原顺序
+    todos.sort((a, b) => (Number(b.priority) || 0) - (Number(a.priority) || 0));
+    if (WG.todoFilter === 'active') todos = todos.filter((t) => !t.done);
+    else if (WG.todoFilter === 'done') todos = todos.filter((t) => t.done);
+    const pct = total ? Math.round(done / total * 100) : 0;
+    const ring = `<div class="wg-ring" style="--pct:${pct}">
+        <svg viewBox="0 0 36 36"><circle class="r-bg" cx="18" cy="18" r="15.5"/><circle class="r-fg" cx="18" cy="18" r="15.5"/></svg>
+        <span>${pct}<small>%</small></span>
+      </div>`;
+    const list = todos.slice(0, 8).map((t) => {
+      const editing = WG.editTodoId === t.id;
+      const main = editing
+        ? `<input class="wg-todo-edit" data-tid="${esc(t.id)}" value="${esc(t.text)}" maxlength="200">`
+        : `<span class="wg-todo-text ${t.done ? 'done-txt' : ''}" data-wact="todo-edit" data-tid="${esc(t.id)}" title="双击编辑">${esc(t.text)}</span>`;
+      return `<div class="wg-todo-item ${t.done ? 'done' : ''}">
         <button class="wg-check ${t.done ? 'on' : ''}" data-wact="todo-toggle" data-tid="${esc(t.id)}" title="切换完成">${t.done ? '<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>' : ''}</button>
-        <span class="wg-todo-text" title="${esc(t.text)}">${esc(t.text)}</span>
-        ${t.due ? `<span class="wg-todo-due">${esc(String(t.due).slice(5))}</span>` : ''}
+        ${main}
+        <button class="wg-star ${t.priority ? 'on' : ''}" data-wact="todo-priority" data-tid="${esc(t.id)}" title="标星优先级">★</button>
+        ${t.due ? `<span class="wg-todo-due" title="关联日期">${esc(String(t.due).slice(5))}</span>` : ''}
         <button class="wg-del" data-wact="todo-del" data-tid="${esc(t.id)}" title="删除">×</button>
-      </div>`).join('');
-    const hint = WG.pickedDate ? `新待办将关联 ${WG.pickedDate}` : '回车快速添加；点日历可选日期';
+      </div>`;
+    }).join('');
+    const filterBar = `<div class="wg-seg">
+        <button data-wact="todo-filter" data-f="active" class="${WG.todoFilter === 'active' ? 'on' : ''}">未完成 ${active}</button>
+        <button data-wact="todo-filter" data-f="done" class="${WG.todoFilter === 'done' ? 'on' : ''}">已完成 ${done}</button>
+        <button data-wact="todo-filter" data-f="all" class="${WG.todoFilter === 'all' ? 'on' : ''}">全部 ${total}</button>
+      </div>`;
     return {
-      sub: `${undone} 项未完成`,
-      body: `<div class="wg-todo-list">${list || '<div class="wg-hint">还没有待办，在下面输入一条。</div>'}</div>`,
-      foot: `<input class="wg-input" name="todo" placeholder="添加待办，回车确认…" autocomplete="off">
-             <button class="wg-mini" data-wact="todo-add">添加</button>
-             <div class="wg-hint" style="width:100%">${esc(hint)}</div>`
+      sub: `${active} 项待办`,
+      body: `${ring}<div class="wg-todo-list">${list || `<div class="wg-empty">${WG.todoFilter === 'active' && done ? '未完成都清光啦 🎉' : '还没有待办，在下面添加一条。'}</div>`}</div>`,
+      foot: `${filterBar}
+        <div class="wg-addrow"><input class="wg-input" name="todo" placeholder="添加待办，回车确认…" autocomplete="off"><button class="wg-mini primary" data-wact="todo-add">添加</button></div>
+        <div class="wg-hint">${WG.pickedDate ? `新待办关联 <b>${esc(WG.pickedDate)}</b> · <span data-wact="cal-clear" class="wg-link">清除</span>` : '双击文字可编辑 · 点日历选日期'}${done ? ` · <span class="wg-link" data-wact="todo-clear-done">清空已完成</span>` : ''}</div>`
     };
   }
 
+  /* ---------- 日历 ---------- */
   function wgCalendarHTML() {
     const now = new Date();
     if (!WG.calY) { WG.calY = now.getFullYear(); WG.calM = now.getMonth(); }
     const y = WG.calY, m = WG.calM;
     const first = new Date(y, m, 1).getDay();
     const days = new Date(y, m + 1, 0).getDate();
-    const due = new Set((S.todos || []).filter((t) => t.due && !t.done).map((t) => t.due));
-    const weeks = ['日', '一', '二', '三', '四', '五', '六'].map((x) => `<div class="wg-cal-w">${x}</div>`).join('');
+    const dueMap = {};
+    (S.todos || []).forEach((t) => {
+      if (t.due && !t.done) { (dueMap[t.due] = dueMap[t.due] || []).push(t); }
+    });
+    const weeks = ['日','一','二','三','四','五','六'].map((x) => `<div class="wg-cal-w">${x}</div>`).join('');
     let cells = '';
     for (let i = 0; i < first; i++) cells += '<div class="wg-cal-cell blank"></div>';
     for (let d = 1; d <= days; d++) {
       const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      const cls = [ds === wgTodayStr() ? 'today' : '', due.has(ds) ? 'has-due' : '', WG.pickedDate === ds ? 'picked' : ''].filter(Boolean).join(' ');
-      cells += `<button class="wg-cal-cell ${cls}" data-wact="cal-day" data-date="${ds}" title="${ds}">${d}</button>`;
+      const label = dayLabel(y, m + 1, d);
+      const cls = [ds === wgTodayStr() ? 'today' : '', dueMap[ds] ? 'has-due' : '', WG.pickedDate === ds ? 'picked' : ''].filter(Boolean).join(' ');
+      cells += `<button class="wg-cal-cell ${cls}" data-wact="cal-day" data-date="${ds}" title="${ds} ${esc(label)}">
+        <span class="d">${d}</span><span class="l">${esc(label)}</span>${dueMap[ds] ? `<i class="dot">${Math.min(dueMap[ds].length, 9)}</i>` : ''}
+      </button>`;
+    }
+    // 选中日的待办清单
+    let pickedList = '';
+    if (WG.pickedDate) {
+      const dayTodos = (S.todos || []).filter((t) => t.due === WG.pickedDate);
+      pickedList = `<div class="wg-daylist">
+        <div class="wg-daylist-h">${esc(WG.pickedDate.slice(5))} 的待办 <span data-wact="cal-clear" class="wg-link">清除选择</span></div>
+        ${dayTodos.length ? dayTodos.map((t) => `<div class="wg-dayitem ${t.done ? 'done' : ''}"><button class="wg-check ${t.done ? 'on' : ''}" data-wact="todo-toggle" data-tid="${esc(t.id)}">${t.done ? '<svg viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>' : ''}</button><span>${esc(t.text)}</span></div>`).join('') : '<div class="wg-empty">这天没有待办</div>'}
+      </div>`;
     }
     return {
       sub: `${y}年${m + 1}月`,
       body: `<div class="wg-cal-nav">
-               <button data-wact="cal-prev" title="上个月">‹</button>
-               <span>${y} 年 ${m + 1} 月</span>
-               <button data-wact="cal-next" title="下个月">›</button>
-               <button data-wact="cal-today" title="回到本月" style="font-size:11px">今天</button>
-             </div>
-             <div class="wg-cal-grid">${weeks}${cells}</div>`,
-      foot: `<div class="wg-hint">${WG.pickedDate ? `已选 ${esc(WG.pickedDate)}，新待办会带上这个日期` : '点日期可为新待办设定日期'}</div>
-             ${WG.pickedDate ? '<button class="wg-mini" data-wact="cal-clear">清除选择</button>' : ''}`
+          <button data-wact="cal-prev" title="上个月">‹</button>
+          <span>${y} 年 ${m + 1} 月</span>
+          <button data-wact="cal-next" title="下个月">›</button>
+          <button data-wact="cal-today" class="wg-today-btn" title="回到本月">今天</button>
+        </div>
+        <div class="wg-cal-grid">${weeks}${cells}</div>${pickedList}`,
+      foot: `<div class="wg-hint">${WG.pickedDate ? `已选 <b>${esc(WG.pickedDate)}</b>，新待办会带上这个日期` : '点日期查看当天待办 / 为待办设日期'}</div>`
     };
   }
 
+  /* ---------- 天气 ---------- */
   function wgWeatherHTML(w) {
     const d = w.data || {};
     const num = Number(d.temp);
-    const shown = (d.temp === null || d.temp === undefined || d.temp === '' || !Number.isFinite(num)) ? '--' : String(Math.round(num));
+    const hasTemp = d.temp !== null && d.temp !== undefined && d.temp !== '' && Number.isFinite(num);
+    const shown = hasTemp ? String(Math.round(num)) : '--';
+    const fcs = Array.isArray(d.forecast) ? d.forecast.slice(0, 5) : [];
+    const forecastHTML = fcs.length ? `<div class="wg-fc">${fcs.map((f, i) => `
+        <div class="wg-fc-day">
+          <span class="fd">${i === 0 ? '今天' : esc(f.date || '')}</span>
+          ${wgWeatherIcon(f.icon || 'cloud')}
+          <span class="ft">${f.tmax != null ? Math.round(f.tmax) + '°' : '--'}<em>${f.tmin != null ? Math.round(f.tmin) + '°' : ''}</em></span>
+        </div>`).join('')}</div>` : '';
+    const chipBar = `<div class="wg-city-chips">${WG_CITIES.slice(0, 6).map((c) => `<button data-wact="weather-city" data-city="${esc(c)}" class="${d.city === c ? 'on' : ''}">${esc(c)}</button>`).join('')}</div>`;
     return {
       sub: d.updatedAt ? '已更新' : '离线',
-      body: `<div class="wg-weather-main"><div class="wg-temp">${shown}<small>°C</small></div>
-               <div class="wg-desc">${esc(d.desc || '点「联网获取」或手动填写')}</div></div>
-             <div class="wg-weather-meta"><span class="wg-city">${esc(d.city || '未设置城市')}</span>
-             ${d.wind != null ? `<span>风速 ${esc(String(d.wind))} km/h</span>` : ''}
-             ${d.updatedAt ? `<span>${esc(wgShortTime(d.updatedAt))}</span>` : ''}</div>`,
-      foot: `<input class="wg-input" name="city" placeholder="城市，如 北京" value="${esc(d.city || '')}" autocomplete="off">
-             <button class="wg-mini" data-wact="weather-fetch">联网获取</button>
-             <button class="wg-mini" data-wact="weather-edit">手动填</button>`
+      body: `<div class="wg-weather-main">
+          ${wgWeatherIcon(d.icon || 'cloud', true)}
+          <div class="wg-wx-info">
+            <div class="wg-temp">${shown}<small>°C</small></div>
+            <div class="wg-desc">${esc(d.desc || '点「联网获取」或手动填写')}</div>
+          </div>
+        </div>
+        <div class="wg-weather-meta">
+          <span class="wg-city">📍 ${esc(d.city || '未设置城市')}${d.country ? ' · ' + esc(d.country) : ''}</span>
+          ${d.apparent != null ? `<span title="体感温度">体感 ${Math.round(d.apparent)}°</span>` : ''}
+          ${d.humidity != null ? `<span title="湿度">湿度 ${Math.round(d.humidity)}%</span>` : ''}
+          ${d.wind != null ? `<span title="风速">风 ${Math.round(d.wind)}km/h</span>` : ''}
+          ${d.updatedAt ? `<span>${esc(wgShortTime(d.updatedAt))}</span>` : ''}
+        </div>${forecastHTML}`,
+      foot: `<div class="wg-addrow"><input class="wg-input" name="city" placeholder="城市，如 北京" value="${esc(d.city || '')}" autocomplete="off"><button class="wg-mini primary" data-wact="weather-fetch">获取</button><button class="wg-mini" data-wact="weather-edit">手动</button></div>${chipBar}`
     };
   }
 
+  /* ---------- 记事本 ---------- */
   function wgNotesHTML() {
-    const notes = S.notes || [];
-    const list = notes.slice(0, 5).map((n) =>
-      `<div class="wg-note-item" data-wact="note-open" data-nid="${esc(n.id)}">
-         <span>${esc(n.title || '未命名笔记')}</span><em>${esc(wgShortTime(n.updatedAt))}</em>
-       </div>`).join('');
+    let notes = (S.notes || []).slice();
+    const kw = WG.noteSearch.trim().toLowerCase();
+    if (kw) notes = notes.filter((n) => String(n.title || '').toLowerCase().includes(kw) || String(n.body || '').toLowerCase().includes(kw));
+    notes.sort((a, b) => (Number(b.pinned ? 1 : 0) - Number(a.pinned ? 1 : 0)));
+    const list = notes.slice(0, 8).map((n) => {
+      const preview = String(n.body || '').replace(/\s+/g, ' ').slice(0, 60);
+      return `<div class="wg-note-item" data-wact="note-open" data-nid="${esc(n.id)}">
+        <div class="wg-note-main"><div class="wg-note-t">${n.pinned ? '<span class="pin">📌</span>' : ''}${esc(n.title || '未命名笔记')}</div>
+        <div class="wg-note-p">${esc(preview || '（空）')}</div></div>
+        <button class="wg-note-pin ${n.pinned ? 'on' : ''}" data-wact="note-pin" data-nid="${esc(n.id)}" title="置顶">📌</button>
+        <em>${esc(wgShortTime(n.updatedAt))}</em>
+      </div>`;
+    }).join('');
     return {
-      sub: `${notes.length} 条`,
-      body: `<div class="wg-note-list">${list || '<div class="wg-hint">还没有笔记，点下面新建一条。</div>'}</div>`,
-      foot: `<button class="wg-mini" data-wact="note-new">+ 新建笔记</button>
-             <div class="wg-hint" style="width:100%">笔记与书签一起存进同一个 JSON 文件</div>`
+      sub: `${(S.notes || []).length} 条`,
+      body: `<input class="wg-input wg-search" name="noteSearch" placeholder="🔍 搜索笔记标题或内容…" value="${esc(WG.noteSearch)}" autocomplete="off">
+        <div class="wg-note-list">${list || `<div class="wg-empty">${kw ? '没有匹配的笔记' : '还没有笔记，点下面新建一条。'}</div>`}</div>`,
+      foot: `<button class="wg-mini primary" data-wact="note-new">＋ 新建笔记</button>`
     };
   }
 
@@ -2188,7 +2352,8 @@
       : w.type === 'calendar' ? wgCalendarHTML()
       : w.type === 'weather' ? wgWeatherHTML(w)
       : wgNotesHTML();
-    return `<div class="wg-card" data-wid="${esc(w.id)}" data-wtype="${esc(w.type)}">
+    const tone = w.type === 'todo' ? 'tone-blue' : w.type === 'calendar' ? 'tone-violet' : w.type === 'weather' ? 'tone-sky' : 'tone-amber';
+    return `<div class="wg-card ${tone}" data-wid="${esc(w.id)}" data-wtype="${esc(w.type)}">
       <div class="wg-head">
         <div class="wg-ico"><svg viewBox="0 0 24 24">${def.icon}</svg></div>
         <div class="wg-title">${esc(def.name)}</div>
@@ -2217,11 +2382,19 @@
   function wgAddTodo(text) {
     const v = String(text || '').trim().slice(0, 200);
     if (!v) { toast('先写点内容'); return; }
-    S.todos.unshift({ id: uid('t_'), text: v, done: false, due: WG.pickedDate || '', createdAt: new Date().toISOString() });
+    S.todos.unshift({ id: uid('t_'), text: v, done: false, priority: 0, due: WG.pickedDate || '', createdAt: new Date().toISOString() });
+    WG.todoFilter = 'active';
     scheduleSave();
     renderWidgets();
     const inp = $('#widgetsPanel input[name="todo"]');
     if (inp) { inp.value = ''; inp.focus(); }
+  }
+  function wgSaveTodoEdit(id, text) {
+    const v = String(text || '').trim().slice(0, 200);
+    WG.editTodoId = '';
+    const t = (S.todos || []).find((x) => x.id === id);
+    if (t && v) { t.text = v; scheduleSave(); }
+    renderWidgets();
   }
   function wgCalMove(delta) {
     let y = WG.calY, m = WG.calM + delta;
@@ -2230,10 +2403,10 @@
     renderWidgets();
   }
 
-  async function wgFetchWeather(w) {
+  async function wgFetchWeather(w, forcedCity) {
     if (WG.busy) return;
     const inp = $('#widgetsPanel input[name="city"]');
-    const city = String((inp && inp.value) || (w.data && w.data.city) || '').trim();
+    const city = String(forcedCity || (inp && inp.value) || (w.data && w.data.city) || '').trim();
     if (!city) { toast('先填一个城市名，例如 北京'); return; }
     WG.busy = true;
     toast('正在获取天气…');
@@ -2241,7 +2414,11 @@
       const r = await fetch('/api/weather?city=' + encodeURIComponent(city), { credentials: 'same-origin' });
       const j = await r.json();
       if (!j.ok) { toast(j.error || '获取失败，可点「手动填」'); return; }
-      w.data = { city: j.city, temp: j.temp, desc: j.desc, wind: j.wind, updatedAt: j.updatedAt };
+      w.data = {
+        city: j.city, country: j.country, temp: j.temp, apparent: j.apparent,
+        humidity: j.humidity, code: j.code, icon: j.icon, isDay: j.isDay,
+        desc: j.desc, wind: j.wind, updatedAt: j.updatedAt, forecast: j.forecast || []
+      };
       scheduleSave();
       renderWidgets();
       toast('天气已更新：' + j.city);
@@ -2264,11 +2441,14 @@
           const city = m.querySelector('#wgWCity').value.trim() || '本地';
           const raw = m.querySelector('#wgWTemp').value.trim();
           const temp = raw === '' ? null : Number(raw);
+          const desc = m.querySelector('#wgWDesc').value.trim() || '未知';
+          const icon = /雨/.test(desc) ? 'rain' : /雪/.test(desc) ? 'snow' : /雾/.test(desc) ? 'fog' : /雷/.test(desc) ? 'storm' : /云|阴/.test(desc) ? 'cloud' : 'sun';
           w.data = {
             city, temp: Number.isFinite(temp) ? temp : null,
-            desc: m.querySelector('#wgWDesc').value.trim() || '未知',
+            desc, icon, apparent: d.apparent == null ? null : d.apparent,
+            humidity: d.humidity == null ? null : d.humidity,
             wind: d.wind == null ? null : d.wind,
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(), forecast: d.forecast || []
           };
           scheduleSave(); renderWidgets(); close(); toast('天气已保存');
         };
@@ -2289,7 +2469,7 @@
           const title = m.querySelector('#wgNTitle').value.trim() || '未命名笔记';
           const body = m.querySelector('#wgNBody').value;
           if (note) { note.title = title; note.body = body; note.updatedAt = new Date().toISOString(); }
-          else S.notes.unshift({ id: uid('n_'), title, body, updatedAt: new Date().toISOString() });
+          else S.notes.unshift({ id: uid('n_'), title, body, pinned: false, updatedAt: new Date().toISOString() });
           scheduleSave(); renderWidgets(); close(); toast('笔记已保存');
         };
         const del = m.querySelector('[data-del]');
@@ -2355,6 +2535,23 @@
       if (inp.name === 'todo') wgAddTodo(inp.value);
       else { const w = widgetByType('weather'); if (w) wgFetchWeather(w); }
     });
+    panel.addEventListener('dblclick', (e) => {
+      const el = e.target.closest('[data-wact="todo-edit"]');
+      if (el) { WG.editTodoId = el.dataset.tid; renderWidgets(); const edit = $('#widgetsPanel .wg-todo-edit'); if (edit) { edit.focus(); edit.select(); } }
+    });
+    // 编辑框失焦保存（focusout 冒泡）
+    panel.addEventListener('focusout', (e) => {
+      if (e.target.matches('.wg-todo-edit')) wgSaveTodoEdit(e.target.dataset.tid, e.target.value);
+    });
+    panel.addEventListener('input', (e) => {
+      if (e.target.name === 'noteSearch') {
+        WG.noteSearch = e.target.value;
+        const pos = e.target.selectionStart;
+        renderWidgets();
+        const again = $('#widgetsPanel input[name="noteSearch"]');
+        if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (_) {} }
+      }
+    });
   }
 
   async function onWidgetClick(e) {
@@ -2378,9 +2575,20 @@
         if (t) { t.done = !t.done; scheduleSave(); renderWidgets(); }
         break;
       }
+      case 'todo-priority': {
+        const t = (S.todos || []).find((x) => x.id === el.dataset.tid);
+        if (t) { t.priority = t.priority ? 0 : 1; scheduleSave(); renderWidgets(); }
+        break;
+      }
+      case 'todo-edit': WG.editTodoId = el.dataset.tid; renderWidgets(); break;
       case 'todo-del':
         S.todos = (S.todos || []).filter((x) => x.id !== el.dataset.tid);
         scheduleSave(); renderWidgets();
+        break;
+      case 'todo-filter': WG.todoFilter = el.dataset.f; renderWidgets(); break;
+      case 'todo-clear-done':
+        S.todos = (S.todos || []).filter((x) => !x.done);
+        scheduleSave(); renderWidgets(); toast('已清空已完成的待办');
         break;
       case 'cal-prev': wgCalMove(-1); break;
       case 'cal-next': wgCalMove(1); break;
@@ -2394,9 +2602,15 @@
         break;
       case 'cal-clear': WG.pickedDate = ''; renderWidgets(); break;
       case 'weather-fetch': if (w) await wgFetchWeather(w); break;
+      case 'weather-city': if (w) await wgFetchWeather(w, el.dataset.city); break;
       case 'weather-edit': if (w) wgEditWeather(w); break;
       case 'note-new': wgEditNote(null); break;
       case 'note-open': wgEditNote(el.dataset.nid); break;
+      case 'note-pin': {
+        const n = (S.notes || []).find((x) => x.id === el.dataset.nid);
+        if (n) { n.pinned = !n.pinned; scheduleSave(); renderWidgets(); }
+        break;
+      }
       default: break;
     }
   }
