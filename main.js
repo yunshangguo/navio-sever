@@ -37,7 +37,16 @@ const VERSION = '2.0.0';
 
 /* ==================== 调试端口 / userData ==================== */
 if (process.env.NAVIO_DEBUG_PORT) app.commandLine.appendSwitch('remote-debugging-port', String(process.env.NAVIO_DEBUG_PORT));
-if (process.env.NAVIO_USER_DATA) app.setPath('userData', process.env.NAVIO_USER_DATA);
+// 便携模式：exe 启动产生的一切文件（Electron 运行时 Cache/LocalStorage/Preferences、
+// 项目日志、GPU 状态、运行锁）全部落在 exe 所在文件夹，绝不在 %APPDATA% 留痕。
+// 业务数据本身在 resolveDataDir() 里也已指向 exe 旁的 data/，两者共用 data 目录树。
+// 环境变量 NAVIO_USER_DATA 优先级最高，供自动化测试做实例隔离。
+if (process.env.NAVIO_USER_DATA) {
+  app.setPath('userData', process.env.NAVIO_USER_DATA);
+} else {
+  const exeDir = path.dirname(process.execPath);
+  app.setPath('userData', path.join(exeDir, 'data', 'runtime'));
+}
 
 /* ==================== 单实例 ==================== */
 const gotLock = app.requestSingleInstanceLock();
