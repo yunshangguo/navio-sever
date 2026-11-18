@@ -1,0 +1,27 @@
+{
+  "sites": 94,
+  "ok": 94,
+  "miss": 0,
+  "byType": {
+    "image/png": 61,
+    "image/x-icon": 23,
+    "image/svg+xml": 10
+  },
+  "bySource": {
+    "link": 28,
+    "ico": 14,
+    "favicon.im": 46,
+    "apple": 6
+  },
+  "duplicates": [
+    {
+      "sha": "366d9d033c82bae2",
+      "count": 2,
+      "hosts": [
+        "www.taobao.com",
+        "www.tmall.com"
+      ]
+    }
+  ],
+  "misses": []
+}

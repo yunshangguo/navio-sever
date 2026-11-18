@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob: https: http:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self';">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b1020">
+<title>Navio · 我的起始页</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="widgets.css">
+<link rel="stylesheet" href="home.css">
+</head>
+<body>
+  <div id="wall"></div>
+  <div id="wall-dim"></div>
+  <div id="ambient"></div>
+
+  <!-- 桌面端标题栏（Web 模式隐藏，内部元素仍被 app.js 引用） -->
+  <div id="titlebar">
+    <div class="tb-brand">
+      <div class="brand-mark">M</div>
+      <span class="brand-text">Navio</span>
+    </div>
+    <div class="tb-clock" id="tbClock"></div>
+    <div class="tb-drag"></div>
+    <div class="tb-btns">
+      <button class="wbtn" id="btnMin"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      <button class="wbtn" id="btnMax"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg></button>
+      <button class="wbtn danger" id="btnClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+  </div>
+
+  <div id="appShell">
+    <!-- ============ 左侧竖列分组标签 ============ -->
+    <aside id="sidebar">
+      <div class="side-brand">
+        <div class="side-logo">M</div>
+        <div class="side-brand-txt"><strong>Navio</strong><span>我的起始页</span></div>
+      </div>
+
+      <!-- 阶段 12：公共分类与自建标签在同一列表里连续排列，不再用分区标题/说明文字强调区别 -->
+      <div class="side-cap">分类</div>
+      <div class="side-scroll">
+        <nav id="sideCatNav" class="side-nav side-nav-cat"></nav>
+        <nav id="sideNav" class="side-nav"></nav>
+      </div>
+
+      <div class="side-cap side-cap-2">快捷</div>
+      <div class="side-quick">
+        <button class="side-link" id="sideWidgets"><span class="sq-ico">▦</span>卡片组件</button>
+        <button class="side-link" id="sideSettings"><span class="sq-ico">⚙</span>设置</button>
+        <button class="side-link" id="sideTheme"><span class="sq-ico">◐</span>切换主题</button>
+        <button class="side-link" id="sideAdd"><span class="sq-ico">＋</span>添加书签</button>
+      </div>
+
+      <div class="side-foot">
+        <div class="side-identity" id="sideIdentity">Navio 起始页</div>
+        <div class="side-stat"><span id="sideTotal">0</span> 个书签 · <span id="sideGroups">0</span> 个标签</div>
+        <div class="web-only" id="webBar">
+          <span class="web-badge">WEB</span>
+          <span id="webUser" class="web-user">—</span>
+          <button class="web-btn primary" id="btnLogin" hidden>登录</button>
+          <button class="web-btn" id="btnChangePw" hidden>修改密码</button>
+          <button class="web-btn" id="btnLogout" hidden>退出</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ 右侧主舞台 ============ -->
+    <div id="stage">
+      <header id="topbar">
+        <div class="stage-crumb">
+          <span class="crumb-dot"></span>
+          <span id="crumbText">全部书签</span>
+          <span class="crumb-count" id="crumbCount"></span>
+        </div>
+        <div class="top-right">
+          <button class="ibtn" id="btnWidgets">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          </button>
+          <button class="ibtn primary" id="btnAdd">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+          <button class="ibtn" id="btnSettings">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9v.09A1.7 1.7 0 0 0 20.96 10H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main id="main">
+        <!-- ============ 首页 Hero ============ -->
+        <section id="hero">
+          <div class="hero-glow"></div>
+          <div class="hero-clock" id="heroClock">00:00</div>
+          <div class="hero-hello" id="heroHello">你好，欢迎回来</div>
+          <div class="hero-date" id="heroDate"></div>
+          <div class="hero-search">
+            <div class="search-wrap" id="searchWrap">
+              <button class="engine-pick" id="enginePick" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="切换搜索引擎">
+                <span class="eng-dot" id="engineDot">B</span>
+                <span class="eng-name" id="engineName">必应</span>
+                <svg class="eng-caret" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+              </button>
+              <span class="eng-sep"></span>
+              <svg class="s-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+              <input id="searchInput" type="text" placeholder="搜索书签 / 输入网址，或输入关键词联网搜索…" spellcheck="false" autocomplete="off">
+              <kbd id="searchKbd">Ctrl K</kbd>
+              <div class="engine-menu" id="engineMenu" role="listbox" aria-label="搜索引擎"></div>
+            </div>
+            <div class="hero-hint" id="heroHint">按 <kbd>Ctrl</kbd> + <kbd>K</kbd> 快速搜索 · 输入网址可直接访问 · 左侧可切换百度 / 谷歌 / 必应 / 360</div>
+          </div>
+          <div class="hero-quick" id="heroQuick"></div>
+        </section>
+
+        <!-- 阶段 10：系统预设分类导航，一次只展示一个分组 -->
+        <nav id="groupTabs" class="tabs"></nav>
+        <div id="sections"></div>
+        <div id="searchResults" class="hidden"></div>
+        <div id="emptyState" class="empty hidden"></div>
+        <!-- 卡片组件放在书签下方，让书签成为首页主角 -->
+        <div id="widgetsPanel" class="wg-panel hidden"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 右键菜单 -->
+  <div id="ctxMenu" class="ctx hidden"></div>
+  <!-- 通用弹窗容器 -->
+  <div id="modalRoot"></div>
+  <!-- 设置抽屉 -->
+  <aside id="drawer" class="drawer">
+    <div class="drawer-head">
+      <h3>设置</h3>
+      <button class="ibtn sm" id="btnCloseDrawer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </aside>
+  <div id="drawerMask" class="drawer-mask hidden"></div>
+  <div id="toastHost" class="toast-host"></div>
+
+  <script src="navio-http.js"></script>
+  <script src="presets.js"></script>
+  <script src="app.js"></script>
+  <script src="home.js"></script>
+</body>
+</html>

@@ -1,0 +1,660 @@
+{
+  "www.zhihu.com": {
+    "file": "9e36b585086956859f03682de2d6cbfd5cc88ca6.png",
+    "type": "image/png",
+    "bytes": 7045,
+    "source": "link",
+    "sha1": "c1137b2f7be906fe"
+  },
+  "www.bilibili.com": {
+    "file": "a30617b654c15b0479b06cc1005a801e573b919c.png",
+    "type": "image/png",
+    "bytes": 40766,
+    "source": "link",
+    "sha1": "d3157085c38b6812"
+  },
+  "www.douban.com": {
+    "file": "780b44e1db34aa6390bc87ff113f67ea59d3c5a9.ico",
+    "type": "image/x-icon",
+    "bytes": 5686,
+    "source": "ico",
+    "sha1": "de01f10f57b2ae75"
+  },
+  "www.baidu.com": {
+    "file": "31e50a13cdfa1bc2a6a0c2a31b74e3340b7a2dbc.ico",
+    "type": "image/x-icon",
+    "bytes": 16958,
+    "source": "ico",
+    "sha1": "af9841b6f0923f89"
+  },
+  "pan.baidu.com": {
+    "file": "1f0898d8326ff1891d77b8c67192cb5425b04ab7.png",
+    "type": "image/png",
+    "bytes": 1658,
+    "source": "favicon.im",
+    "sha1": "a1b3de11bd8bd784"
+  },
+  "www.bing.com": {
+    "file": "275ebf4fb0c00c59e5c55bf1763c82c2baf29b07.png",
+    "type": "image/png",
+    "bytes": 1320,
+    "source": "apple",
+    "sha1": "e41c5ba98bd394c1"
+  },
+  "mail.qq.com": {
+    "file": "3c3d76018582480f326052d68839ff28d2806c4d.png",
+    "type": "image/png",
+    "bytes": 2910,
+    "source": "favicon.im",
+    "sha1": "d13fc7f1029b6270"
+  },
+  "chat.deepseek.com": {
+    "file": "510cc1dbd8fd81d9fa3a8f7136f29a372e50caee.svg",
+    "type": "image/svg+xml",
+    "bytes": 3642,
+    "source": "link",
+    "sha1": "0cffd84a96095226"
+  },
+  "weibo.com": {
+    "file": "5b3a3dc8a4f10f35461ebd616219500a6c7d2d0a.ico",
+    "type": "image/x-icon",
+    "bytes": 10134,
+    "source": "ico",
+    "sha1": "b7609ea7f3e0c2c7"
+  },
+  "www.cursor.com": {
+    "file": "33fb3f21728e759f1944bca50aa91c7bbde95605.png",
+    "type": "image/png",
+    "bytes": 7047,
+    "source": "apple",
+    "sha1": "5eec0dff36c4040d"
+  },
+  "www.midjourney.com": {
+    "file": "fed2c05549262c60f7015081c8267473ab7e1e64.png",
+    "type": "image/png",
+    "bytes": 2011,
+    "source": "favicon.im",
+    "sha1": "6f61ffbcaaed8e90"
+  },
+  "openai.com": {
+    "file": "4367ac77fb94e0959cdf51bbe543c64b15bec04b.svg",
+    "type": "image/svg+xml",
+    "bytes": 2466,
+    "source": "link",
+    "sha1": "86216d9fa141e930"
+  },
+  "gitee.com": {
+    "file": "bd09994c3b45044421537c1133a3e9634642b0a4.png",
+    "type": "image/png",
+    "bytes": 1769,
+    "source": "favicon.im",
+    "sha1": "721955fe6cdfe164"
+  },
+  "stackoverflow.com": {
+    "file": "d1f6640035aec67523e309483c73e0aaa9ee6caf.png",
+    "type": "image/png",
+    "bytes": 1265,
+    "source": "favicon.im",
+    "sha1": "6066be7839baa813"
+  },
+  "www.npmjs.com": {
+    "file": "2c4f7e5703673e13eb015184b459dbec7c72d8d6.png",
+    "type": "image/png",
+    "bytes": 286,
+    "source": "favicon.im",
+    "sha1": "95a5198c63c302d4"
+  },
+  "claude.ai": {
+    "file": "4476d43180271a8186019a47128bcc3c43afbf48.ico",
+    "type": "image/x-icon",
+    "bytes": 2445,
+    "source": "favicon.im",
+    "sha1": "e41fd48785f383bd"
+  },
+  "vuejs.org": {
+    "file": "0710c1fb7f2eb20a4941c895631ba14f66d505d0.svg",
+    "type": "image/svg+xml",
+    "bytes": 316,
+    "source": "link",
+    "sha1": "7a923d54378b2ac7"
+  },
+  "developer.mozilla.org": {
+    "file": "44fe3be6b8c5c902d4a74cf29172fb0092bf22cc.svg",
+    "type": "image/svg+xml",
+    "bytes": 536,
+    "source": "link",
+    "sha1": "b875a1e6949227d0"
+  },
+  "react.dev": {
+    "file": "44ca629c37743cbb2308a91c3cc1597c37660249.svg",
+    "type": "image/svg+xml",
+    "bytes": 4033,
+    "source": "link",
+    "sha1": "7b3a051f243c3295"
+  },
+  "vercel.com": {
+    "file": "bad8b36782d0e66fca349621e5be7131b393d384.png",
+    "type": "image/png",
+    "bytes": 534,
+    "source": "apple",
+    "sha1": "a49180bb53307a77"
+  },
+  "www.docker.com": {
+    "file": "421d04f7244ff8a9bca1fd4e7d572bb2dc50ca7a.png",
+    "type": "image/png",
+    "bytes": 2900,
+    "source": "favicon.im",
+    "sha1": "2326a149794edb42"
+  },
+  "juejin.cn": {
+    "file": "ae7664820da1bb9f616cd4c194528fe4dc92cb37.svg",
+    "type": "image/svg+xml",
+    "bytes": 6116,
+    "source": "link",
+    "sha1": "17887e1eda3794cb"
+  },
+  "www.xiaohongshu.com": {
+    "file": "17cef47639a84551c2078e3f1e1e1bd9829c0d34.png",
+    "type": "image/png",
+    "bytes": 2482,
+    "source": "link",
+    "sha1": "05000d9f09761dee"
+  },
+  "www.toutiao.com": {
+    "file": "a789e8c1e79f615f194ad94eeeba0e437ab102eb.png",
+    "type": "image/png",
+    "bytes": 1838,
+    "source": "favicon.im",
+    "sha1": "259c9f5fd756d3f4"
+  },
+  "nodejs.org": {
+    "file": "f1d057715f3c885ce98d324ac2009c94d0cfd162.png",
+    "type": "image/png",
+    "bytes": 1130,
+    "source": "apple",
+    "sha1": "3e59b9dea4e2e1b2"
+  },
+  "www.thepaper.cn": {
+    "file": "8a447f3cd08f2a18142ffd6c78f2f75606c0af3e.png",
+    "type": "image/png",
+    "bytes": 1232,
+    "source": "favicon.im",
+    "sha1": "2db276e7bd0be795"
+  },
+  "www.hupu.com": {
+    "file": "cbc4831fd5a09d9753f90108b4fb1f740cfe391c.ico",
+    "type": "image/x-icon",
+    "bytes": 4286,
+    "source": "link",
+    "sha1": "6636c31f96a8a4c5"
+  },
+  "bbs.nga.cn": {
+    "file": "3133a9049053734eeb0ae3f14c24a7a599671994.ico",
+    "type": "image/x-icon",
+    "bytes": 1406,
+    "source": "ico",
+    "sha1": "71d1e30dd5a5be02"
+  },
+  "www.google.com": {
+    "file": "d8b99f68b208b5453b391cb0c6c3d6a9824f3c3a.png",
+    "type": "image/png",
+    "bytes": 1322,
+    "source": "favicon.im",
+    "sha1": "5fb07e9235adcdcb"
+  },
+  "chatgpt.com": {
+    "file": "f18e241fb1fb59b1577c83ab8402bb3cd5d06b90.png",
+    "type": "image/png",
+    "bytes": 5152,
+    "source": "favicon.im",
+    "sha1": "1d4021e9b7261d6f"
+  },
+  "gemini.google.com": {
+    "file": "e1b1fa15e19f467edbe47479a0cb62a9f878b5fe.png",
+    "type": "image/png",
+    "bytes": 61823,
+    "source": "favicon.im",
+    "sha1": "a5e60ad13bcad32c"
+  },
+  "huggingface.co": {
+    "file": "71612e4c2c8d1e768731c62eec6c8add5a8f6c90.ico",
+    "type": "image/x-icon",
+    "bytes": 205556,
+    "source": "favicon.im",
+    "sha1": "a72db2caa3f2642b"
+  },
+  "www.douyin.com": {
+    "file": "d52b43d88bb9f8dd6aab900ff5568395530009b5.png",
+    "type": "image/png",
+    "bytes": 1601,
+    "source": "favicon.im",
+    "sha1": "5fc1fbb7910ff1c1"
+  },
+  "www.netflix.com": {
+    "file": "610f6418b2a54f12c46e8508685d1362463fe51d.png",
+    "type": "image/png",
+    "bytes": 1755,
+    "source": "favicon.im",
+    "sha1": "867e51e9b4a474c1"
+  },
+  "www.iqiyi.com": {
+    "file": "38b85b2a7cb244dd872087147f1b688ea1ab82af.ico",
+    "type": "image/x-icon",
+    "bytes": 32038,
+    "source": "link",
+    "sha1": "5edca475c7781923"
+  },
+  "v.qq.com": {
+    "file": "366938ff9920b398f8d9ae74a8b01169584e8a3c.png",
+    "type": "image/png",
+    "bytes": 4866,
+    "source": "link",
+    "sha1": "7fa7c7fc8f223751"
+  },
+  "github.com": {
+    "file": "c2208abde9668e8e9815c3690855edd1e63abeac.svg",
+    "type": "image/svg+xml",
+    "bytes": 959,
+    "source": "favicon.im",
+    "sha1": "4b02307c306f900a"
+  },
+  "music.163.com": {
+    "file": "704130ad3a760afcf5be43099ed344d2cd6e2fe1.ico",
+    "type": "image/x-icon",
+    "bytes": 4286,
+    "source": "link",
+    "sha1": "f5cd7e69a86794f2"
+  },
+  "y.qq.com": {
+    "file": "ec745a71a6f2cd61dc4f3baf9a22f24c816728b7.png",
+    "type": "image/png",
+    "bytes": 1512,
+    "source": "favicon.im",
+    "sha1": "d2e88c2ee784a748"
+  },
+  "www.youku.com": {
+    "file": "6abef632ecf61f8891e42fa57aa3cdbee064d706.ico",
+    "type": "image/x-icon",
+    "bytes": 9662,
+    "source": "ico",
+    "sha1": "46236ae7e1573d51"
+  },
+  "www.v2ex.com": {
+    "file": "5e81ef5b64c8fa1221e9aac70e3e858118477f44.png",
+    "type": "image/png",
+    "bytes": 13257,
+    "source": "favicon.im",
+    "sha1": "1d476bfc3f274779"
+  },
+  "www.taobao.com": {
+    "file": "7531ae91a4ebe3f99576c9938fb556474e2a422b.png",
+    "type": "image/png",
+    "bytes": 4540,
+    "source": "link",
+    "sha1": "366d9d033c82bae2"
+  },
+  "www.tmall.com": {
+    "file": "479c886ba196794cf2165c571090b337fc90c416.png",
+    "type": "image/png",
+    "bytes": 4540,
+    "source": "link",
+    "sha1": "366d9d033c82bae2"
+  },
+  "www.jd.com": {
+    "file": "c0c3f8df5e8e0b6e376b1cc465fa0fdb0f9daa9c.ico",
+    "type": "image/x-icon",
+    "bytes": 25214,
+    "source": "ico",
+    "sha1": "59288fe729edbc01"
+  },
+  "www.pinduoduo.com": {
+    "file": "6a96a62c5851afc1b22aa1449b38b35a760c7b0d.png",
+    "type": "image/png",
+    "bytes": 2741,
+    "source": "link",
+    "sha1": "d47a67dfa2e0c40f"
+  },
+  "www.meituan.com": {
+    "file": "6614693bb64b81028d001cb72fbbfc40e0a0356b.png",
+    "type": "image/png",
+    "bytes": 1861,
+    "source": "favicon.im",
+    "sha1": "76980fa5c301264a"
+  },
+  "ele.me": {
+    "file": "b3c6d8d7b3db9c9f3e81256c4caaec8cb7bfb11e.png",
+    "type": "image/png",
+    "bytes": 1476,
+    "source": "link",
+    "sha1": "d54b88a7bb85d2c1"
+  },
+  "www.reddit.com": {
+    "file": "f420470addba27b8577bb40e02229e90af568d69.png",
+    "type": "image/png",
+    "bytes": 2441,
+    "source": "favicon.im",
+    "sha1": "3bceac8d2b1869b9"
+  },
+  "www.ctrip.com": {
+    "file": "827449f61ae82af48dd99164b4d6fd16b588f00d.ico",
+    "type": "image/x-icon",
+    "bytes": 1150,
+    "source": "ico",
+    "sha1": "97f7762be7fee34e"
+  },
+  "zh.wikipedia.org": {
+    "file": "ff0911510687b8287a6926a3f6b5278b3fe35a0e.png",
+    "type": "image/png",
+    "bytes": 1313,
+    "source": "favicon.im",
+    "sha1": "33b8d083e468e239"
+  },
+  "www.alipay.com": {
+    "file": "c8a692e1a70f7ef37e071b26dfd57b72234cb6b4.png",
+    "type": "image/png",
+    "bytes": 42694,
+    "source": "link",
+    "sha1": "9d7e76b81d7ca47a"
+  },
+  "www.12306.cn": {
+    "file": "c6c7eb54a5d53124dacc99c96d3e1b4fcf4784b4.png",
+    "type": "image/png",
+    "bytes": 4111,
+    "source": "favicon.im",
+    "sha1": "ede08d565bc65afb"
+  },
+  "www.amazon.com": {
+    "file": "47cf2c8c9947e99f6ecfee54a51bd0225f376ebc.ico",
+    "type": "image/x-icon",
+    "bytes": 15086,
+    "source": "ico",
+    "sha1": "542f10bcdcf95d7a"
+  },
+  "www.kdocs.cn": {
+    "file": "66af03ac8ff0a429940eff7d9e07824aaddefa08.png",
+    "type": "image/png",
+    "bytes": 2003,
+    "source": "favicon.im",
+    "sha1": "109cde66deb04e0f"
+  },
+  "docs.qq.com": {
+    "file": "8495cf4e392c4eba16c3c806da970b1befb7363f.ico",
+    "type": "image/x-icon",
+    "bytes": 4286,
+    "source": "favicon.im",
+    "sha1": "1c02fe0946b001be"
+  },
+  "telegram.org": {
+    "file": "8240183e26da17d0b0f0070dcb21455ec0f8fea4.png",
+    "type": "image/png",
+    "bytes": 1895,
+    "source": "favicon.im",
+    "sha1": "432f8d45992648c5"
+  },
+  "www.dingtalk.com": {
+    "file": "a3e1df05f208b5a919f7e7da685c6cad9744e7dd.png",
+    "type": "image/png",
+    "bytes": 11431,
+    "source": "link",
+    "sha1": "c1af50465fd0eb1e"
+  },
+  "www.yuque.com": {
+    "file": "bcecfde03bcee51904898722243b6106c2d29e91.svg",
+    "type": "image/svg+xml",
+    "bytes": 8017,
+    "source": "link",
+    "sha1": "3f100ad3491674d0"
+  },
+  "www.youtube.com": {
+    "file": "d3b36bdecad651e236f1b127929cb5a7dd664762.png",
+    "type": "image/png",
+    "bytes": 5020,
+    "source": "favicon.im",
+    "sha1": "30215a773cec0e4d"
+  },
+  "www.feishu.cn": {
+    "file": "0e007c5439c9da42b57c564b3960a1131afd02d8.ico",
+    "type": "image/x-icon",
+    "bytes": 9662,
+    "source": "ico",
+    "sha1": "dace7cdecca4524d"
+  },
+  "meeting.tencent.com": {
+    "file": "764a43093c1b73f1c3bbfe456f80a38cc6484854.png",
+    "type": "image/png",
+    "bytes": 13689,
+    "source": "link",
+    "sha1": "10eb49bde5b08796"
+  },
+  "obsidian.md": {
+    "file": "094bd629cf3be8adcb2e62198c571e43485a6fdc.svg",
+    "type": "image/svg+xml",
+    "bytes": 1361,
+    "source": "link",
+    "sha1": "3ad9cdaf323c1249"
+  },
+  "trello.com": {
+    "file": "2cbf9493cd529ab73e8a98a129852dbd07f07191.ico",
+    "type": "image/x-icon",
+    "bytes": 2710,
+    "source": "ico",
+    "sha1": "1458cf1fed5304a2"
+  },
+  "www.notion.so": {
+    "file": "71b1304ece9b21e05fcd851d609c8cb51ac41da6.png",
+    "type": "image/png",
+    "bytes": 8078,
+    "source": "link",
+    "sha1": "13d4dc87a472e5cd"
+  },
+  "www.figma.com": {
+    "file": "6e1675469a289fcfc2c05b34635f71a3ca2338c0.png",
+    "type": "image/png",
+    "bytes": 2667,
+    "source": "favicon.im",
+    "sha1": "89bfc1a2a8e8e30b"
+  },
+  "www.iconfont.cn": {
+    "file": "acb5dc29c5050ef8c0a96406fe1d911591140498.svg",
+    "type": "image/svg+xml",
+    "bytes": 5688,
+    "source": "link",
+    "sha1": "16fe5d53f05394f1"
+  },
+  "open.spotify.com": {
+    "file": "b126ae88249b0c1c68de8ac5f68fc0a7a05651dc.png",
+    "type": "image/png",
+    "bytes": 1129,
+    "source": "favicon.im",
+    "sha1": "3e3cecf141a7312e"
+  },
+  "outlook.com": {
+    "file": "a45016f2e246f3e4b7d17e87511bc2f3516c9530.png",
+    "type": "image/png",
+    "bytes": 15472,
+    "source": "favicon.im",
+    "sha1": "1c7a6c1e1ddeb854"
+  },
+  "store.steampowered.com": {
+    "file": "222ce78553ee97bda06cd393782fccea26788439.png",
+    "type": "image/png",
+    "bytes": 2467,
+    "source": "favicon.im",
+    "sha1": "5a7034a219a8ea94"
+  },
+  "www.twitch.tv": {
+    "file": "f0dc517308d8ac88b0e39b43e944df92e97952db.png",
+    "type": "image/png",
+    "bytes": 382,
+    "source": "favicon.im",
+    "sha1": "8ffa68e19a37ad87"
+  },
+  "unsplash.com": {
+    "file": "78540bbbd6600fd3ebb6848fd4fd26ceebf5c390.png",
+    "type": "image/png",
+    "bytes": 165,
+    "source": "apple",
+    "sha1": "ee7a4090b43cfffc"
+  },
+  "www.zcool.com.cn": {
+    "file": "42f8ea2882bfcca03b3e5c0b91f194d2779a8121.png",
+    "type": "image/png",
+    "bytes": 4678,
+    "source": "favicon.im",
+    "sha1": "8ed47f0985cd24e0"
+  },
+  "dribbble.com": {
+    "file": "19f7e024d5c59506477771b6376668ba785ea3a6.png",
+    "type": "image/png",
+    "bytes": 1761,
+    "source": "favicon.im",
+    "sha1": "1748043789a5063c"
+  },
+  "www.w3school.com.cn": {
+    "file": "9cd5ce5e9a9dc1240fd2e452f5b1961a4468f637.png",
+    "type": "image/png",
+    "bytes": 2895,
+    "source": "link",
+    "sha1": "fdedb10c6705953c"
+  },
+  "www.runoob.com": {
+    "file": "9a94da666ca8c85e369a770bc2606b7d55fca42c.ico",
+    "type": "image/x-icon",
+    "bytes": 4286,
+    "source": "ico",
+    "sha1": "9ea938e4dd46d17c"
+  },
+  "www.pinterest.com": {
+    "file": "0eb5c51c68c69292a1c30c6e3807050c7f6444a7.png",
+    "type": "image/png",
+    "bytes": 1618,
+    "source": "favicon.im",
+    "sha1": "bbf9be8d40f05c2e"
+  },
+  "www.cnki.net": {
+    "file": "14a4e05ff4f7406d406684a1dde8a2609a926c5f.png",
+    "type": "image/png",
+    "bytes": 2294,
+    "source": "apple",
+    "sha1": "59de1de3ac76c76d"
+  },
+  "www.udemy.com": {
+    "file": "5e9c5a078fc4454b293791fca49787f3c6a2592e.png",
+    "type": "image/png",
+    "bytes": 818,
+    "source": "favicon.im",
+    "sha1": "70867bfad11f0c5f"
+  },
+  "www.coursera.org": {
+    "file": "eddb19f9aa4ce5b48b75e7a54463b7091f78dbe4.png",
+    "type": "image/png",
+    "bytes": 1465,
+    "source": "favicon.im",
+    "sha1": "b34fb110614ee0ec"
+  },
+  "fanqienovel.com": {
+    "file": "675d7b26bd4e2e1e4fd9f941e5026325ab922ef5.png",
+    "type": "image/png",
+    "bytes": 6940,
+    "source": "link",
+    "sha1": "838598dac1d1aa59"
+  },
+  "www.qidian.com": {
+    "file": "f9179468b617dd13dad8094873f89e139d496561.ico",
+    "type": "image/x-icon",
+    "bytes": 4286,
+    "source": "ico",
+    "sha1": "787b6f94552b942f"
+  },
+  "www.aliyun.com": {
+    "file": "a11e2be58954b6fb3a9a5b415aca5380a24677d8.ico",
+    "type": "image/x-icon",
+    "bytes": 5708,
+    "source": "ico",
+    "sha1": "8eb3808221143786"
+  },
+  "cloud.tencent.com": {
+    "file": "f22602f6cc8f5e074cd2740c6ced5df54714a2cf.png",
+    "type": "image/png",
+    "bytes": 906,
+    "source": "favicon.im",
+    "sha1": "c2cd244001ee495b"
+  },
+  "aws.amazon.com": {
+    "file": "8e49140c25f0046f1e7a3a9f5db85321015962fb.png",
+    "type": "image/png",
+    "bytes": 3061,
+    "source": "favicon.im",
+    "sha1": "4371db20fec7a6ba"
+  },
+  "www.huaweicloud.com": {
+    "file": "008fd5b0d433b2ef7dbac464fe746b3fa30e92e8.ico",
+    "type": "image/x-icon",
+    "bytes": 38078,
+    "source": "link",
+    "sha1": "33d5a340998e8bbd"
+  },
+  "portal.azure.com": {
+    "file": "213d6f6d0ea872ada83e24930e770c8fcf6ccf8c.png",
+    "type": "image/png",
+    "bytes": 426,
+    "source": "favicon.im",
+    "sha1": "9e9990c3cb7c5c18"
+  },
+  "kubernetes.io": {
+    "file": "b03611c1abbd51c1ba4b629eaf73c1c69d6c86c7.png",
+    "type": "image/png",
+    "bytes": 10516,
+    "source": "favicon.im",
+    "sha1": "9d35c9da601efbd6"
+  },
+  "grafana.com": {
+    "file": "2a430edf6df19b471a943143e0365816be260484.ico",
+    "type": "image/x-icon",
+    "bytes": 1150,
+    "source": "ico",
+    "sha1": "80a3bb558de05c43"
+  },
+  "mail.google.com": {
+    "file": "1fe099df5f46e4c3c7e8ff6d5a72f695a06acad4.ico",
+    "type": "image/x-icon",
+    "bytes": 27473,
+    "source": "favicon.im",
+    "sha1": "72bb2694f4aa52e0"
+  },
+  "www.jenkins.io": {
+    "file": "b0d985f9081ee9e2321d2d176d6a9b6311e42a35.png",
+    "type": "image/png",
+    "bytes": 5256,
+    "source": "link",
+    "sha1": "00cff08723a2e5d9"
+  },
+  "www.behance.net": {
+    "file": "6b428cd8f5e932002168ea79feb233b7bb9efe02.png",
+    "type": "image/png",
+    "bytes": 1493,
+    "source": "favicon.im",
+    "sha1": "6cb2560a1f574f1c"
+  },
+  "medium.com": {
+    "file": "2e6de05c29f5517e338d138833c07294d0712672.ico",
+    "type": "image/x-icon",
+    "bytes": 4286,
+    "source": "favicon.im",
+    "sha1": "2868c3a7b9f3eda4"
+  },
+  "cloud.google.com": {
+    "file": "62cf648830990c6ab10da1ddeb132fff8e76cc34.png",
+    "type": "image/png",
+    "bytes": 9447,
+    "source": "favicon.im",
+    "sha1": "a1bb1bba27e7d081"
+  },
+  "dash.cloudflare.com": {
+    "file": "f4049034457c2625986578ab0cebd7a4ecd0e094.png",
+    "type": "image/png",
+    "bytes": 908,
+    "source": "favicon.im",
+    "sha1": "f11081ef88c0de4e"
+  }
+}

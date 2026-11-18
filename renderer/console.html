@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; object-src 'none'">
+<title>Navio Server · 服务端控制台</title>
+<link rel="stylesheet" href="console.css">
+</head>
+<body>
+  <div id="titlebar">
+    <div class="logo">M</div>
+    <span class="tt">Navio Server <em>服务端控制台</em></span>
+    <span class="drag"></span>
+    <span id="stateChip" class="chip">连接中…</span>
+    <button class="wbtn" id="btnMin" title="最小化">─</button>
+    <button class="wbtn danger" id="btnHide" title="隐藏到托盘">×</button>
+  </div>
+
+  <div class="layout">
+    <nav class="side">
+      <div class="nav-group">服务</div>
+      <button class="nav on" data-tab="overview"><i>◈</i> 概览</button>
+      <button class="nav" data-tab="service"><i>⚙</i> 服务与端口</button>
+      <button class="nav" data-tab="security"><i>🛡</i> 访问安全</button>
+      <div class="nav-group">管理</div>
+      <button class="nav" data-tab="users"><i>☺</i> 账号密码</button>
+      <button class="nav" data-tab="data"><i>▤</i> 数据库 / 文件</button>
+      <button class="nav" data-tab="icons"><i>◇</i> 内置图标库</button>
+      <div class="nav-group">诊断</div>
+      <button class="nav" data-tab="logs"><i>≡</i> 运行日志</button>
+      <div class="side-foot">
+        <div id="verLine">v2.0.0</div>
+        <button class="link" id="btnOpenWeb">在浏览器中打开 ↗</button>
+      </div>
+    </nav>
+    <main id="pane" class="pane"></main>
+  </div>
+
+  <div id="modalRoot"></div>
+  <div id="toastHost"></div>
+  <script src="console.js"></script>
+</body>
+</html>

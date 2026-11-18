@@ -1,0 +1,59 @@
+{
+  "name": "navio-server",
+  "productName": "Navio",
+  "version": "2.0.0",
+  "description": "Navio Server — Windows 宿主机上的 Web 书签导航，Electron 内嵌 HTTP 服务 + JSON 文件存储",
+  "main": "main.js",
+  "author": "yunshangguo",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "test": "node _test_core.js && node _test_server.js && node _test_widgets.js",
+    "test:core": "node _test_core.js",
+    "test:server": "node _test_server.js",
+    "verify": "node _verify_v2.js",
+    "asar": "node tools/pack-asar.js",
+    "dist": "electron-builder --win portable",
+    "test:widgets": "node _test_widgets.js",
+    "verify:widgets": "node _verify_widgets.js"
+  },
+  "devDependencies": {
+    "electron": "31.7.7",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "com.yunshangguo.naviowin",
+    "productName": "Navio",
+    "copyright": "Copyright © 2026",
+    "directories": {
+      "output": "C:/AI使用/navio-dist",
+      "buildResources": "build"
+    },
+    "electronDist": "node_modules/electron/dist",
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "renderer/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "Navio-${version}-portable.exe",
+      "requestExecutionLevel": "user"
+    },
+    "compression": "normal"
+  }
+}
