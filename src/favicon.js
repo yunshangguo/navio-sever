@@ -95,6 +95,52 @@ async function fetchBuf(getNet, url, asText = false) {
   }
 }
 
+/** HTML 实体解码（只处理常见命名实体 + 数字实体，够标题用） */
+function decodeEntities(s) {
+  const Named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', hellip: '…', copy: '©', reg: '®', trade: '™' };
+  return String(s || '')
+    .replace(/&([a-z]+);/gi, (m, n) => (Named[n.toLowerCase()] !== undefined ? Named[n.toLowerCase()] : m))
+    .replace(/&#x([0-9a-f]+);/gi, (m, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch (_) { return m; } })
+    .replace(/&#(\d+);/g, (m, d) => { try { return String.fromCodePoint(parseInt(d, 10)); } catch (_) { return m; } });
+}
+
+/**
+ * 从首页 HTML 解析网站名称：<title> 优先，其次 og:title / twitter:title。
+ * 去掉多余空白，限制长度，返回空串表示没抓到。
+ */
+function parseTitleFromHtml(html) {
+  const src = String(html || '');
+  const pick = (re) => {
+    const m = re.exec(src);
+    if (!m || !m[1]) return '';
+    return decodeEntities(m[1].replace(/<[^>]*>/g, ''))
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 120);
+  };
+  // meta 标签属性顺序不固定，先整段匹配再分别取属性与 content
+  const metaBy = (attr, value) => {
+    const re = /<meta\b[^>]*>/gi;
+    let m;
+    while ((m = re.exec(src))) {
+      const tag = m[0];
+      if (!new RegExp(attr + '\\s*=\\s*["\']' + value + '["\']', 'i').test(tag)) continue;
+      const c = /content\s*=\s*["']([^"']+)["']/i.exec(tag);
+      if (!c) continue;
+      return decodeEntities(c[1].replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim().slice(0, 120);
+    }
+    return '';
+  };
+  const candidates = [
+    metaBy('property', 'og:title'),
+    metaBy('name', 'twitter:title'),
+    pick(/<title\b[^>]*>([\s\S]*?)<\/title>/i)
+  ];
+  // <title> 通常最贴近站点名；og/twitter 有时带营销长句，放后面兜底
+  const ordered = [candidates[2], candidates[0], candidates[1]];
+  return ordered.find((x) => x) || '';
+}
+
 function pickIconsFromHtml(html, origin) {
   const out = [];
   const re = /<link\b[^>]*>/gi;
@@ -193,6 +239,28 @@ class IconCache {
     }
   }
 
+  /** 抓取网站真实名称（首页 HTML 的 <title>/og:title），失败返回空串 */
+  async fetchTitle(rawUrl) {
+    const info = siteInfo(rawUrl);
+    if (!info) return '';
+    let page = await fetchBuf(this.getNet, info.origin + '/', true);
+    // 本地/内网带端口或内网域名：https 失败再试 http
+    if (!page || !page.buf) {
+      try {
+        const u = new URL(info.origin);
+        const hostname = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+        const hasPort = !!u.port && u.port !== '443';
+        const lan = /\.(local|lan|home|internal|intranet|test|home\.arpa|localhost)$/i.test(hostname) ||
+          hostname === 'localhost' || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
+        if (u.protocol === 'https:' && (hasPort || lan)) {
+          page = await fetchBuf(this.getNet, 'http://' + u.host + '/', true);
+        }
+      } catch (_) {}
+    }
+    if (!page || !page.buf) return '';
+    return parseTitleFromHtml(page.buf.toString('utf8'));
+  }
+
   clear(origin) {
     const k = this.keyFor(origin);
     if (!fs.existsSync(this.dir)) return;
@@ -215,4 +283,4 @@ class IconCache {
   }
 }
 
-module.exports = { IconCache, siteInfo, sniff };
+module.exports = { IconCache, siteInfo, sniff, parseTitleFromHtml, decodeEntities };

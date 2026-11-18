@@ -50,7 +50,7 @@ const MAX_BODY = 8 * 1024 * 1024;
 // 未登录游客可调用的接口（只读 / 个人视图）。备份、恢复、导入、宿主机探测等一律不放行。
 const PUBLIC_API = new Set([
   '/api/state', '/api/state/flush', '/api/state/reset',
-  '/api/weather', '/api/icon', '/api/preset-icon', '/api/preset-icons', '/api/preset-colors',
+  '/api/weather', '/api/icon', '/api/title', '/api/preset-icon', '/api/preset-icons', '/api/preset-colors',
   '/api/auth/session', '/api/wall', '/api/copy', '/api/open-external',
   '/api/bookmarks/import-html', '/api/bookmarks/export-html'
 ]);
@@ -665,6 +665,15 @@ class NavioServer {
 
     /* --- 图标 / 图标库 --- */
     if (pathname === '/api/icon') return this.icon(req, res, u);
+    // 抓取网站真实名称（首页 <title>/og:title），供添加书签时自动填名称。
+    // 游客可用；抓不到返回空串，由前端回退到域名。
+    if (pathname === '/api/title' && method === 'POST') {
+      const raw = String((body && (body.url || body.host)) || '').trim();
+      if (!raw) return json(res, 200, { ok: true, title: '' });
+      let title = '';
+      try { title = await this.icons.fetchTitle(raw); } catch (_) {}
+      return json(res, 200, { ok: true, title: String(title || '').slice(0, 120) });
+    }
     if (pathname === '/api/icon/refresh' && method === 'POST') {
       const rawUrl = body && (body.url || body.host);
       const host = preset.cleanHost(rawUrl || '');

@@ -943,16 +943,25 @@
         $u.addEventListener('input', paintIcon);
         $t.addEventListener('input', paintIcon);
 
+        let titleFetchSeq = 0;
         $u.addEventListener('blur', () => {
           if (!$u.value.trim()) return;
           $u.value = normalizeUrl($u.value);
-          if (!$t.value.trim()) {
-            try {
-              const host = hostKey($u.value).replace(/^www\./, '');
-              $t.value = host;
-            } catch (_) {}
-          }
           paintIcon();
+          if ($t.value.trim()) return; // 用户已填名称，不覆盖
+          const url = $u.value;
+          let host = '';
+          try { host = hostKey(url).replace(/^www\./, ''); } catch (_) {}
+          const seq = ++titleFetchSeq;
+          // 先即时填域名做兜底，抓到真实标题后再替换
+          $t.value = host;
+          if (!API.fetchTitle) return;
+          Promise.resolve(API.fetchTitle(url)).then((r) => {
+            if (seq !== titleFetchSeq) return;              // 网址又变了，作废
+            if ($t.value.trim() && $t.value !== host) return; // 用户手填了别的名称，作废
+            const t = r && r.title ? String(r.title).trim() : '';
+            if (t && t !== host) $t.value = t;
+          }).catch(() => {});
         });
 
         $u.addEventListener('keydown', (e) => {

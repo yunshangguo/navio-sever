@@ -193,6 +193,14 @@
     },
     version: () => call('/version').then((r) => ({ app: r.version || '2.0.0', electron: 'Web', chrome: navigator.userAgent.match(/Chrome\/[\d.]+/)?.[0] || '', node: 'Server' })),
     refreshIcon: (url) => call('/icon/refresh', { url }),
+    fetchTitle: async (url) => {
+      try {
+        const r = await call('/title', { url });
+        return { ok: true, title: r && r.title ? String(r.title) : '' };
+      } catch (_) {
+        return { ok: false, title: '' };
+      }
+    },
     pickWallpaper: async () => {
       const img = await pickImage();
       if (!img) return { ok: false, canceled: true };
