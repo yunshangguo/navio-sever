@@ -8,6 +8,15 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const invoke = (ch, arg) => ipcRenderer.invoke(ch, arg);
 
+// 托盘「设置…」可能让主进程在页面脚本就绪前就发来跳转指令；
+// 先缓存最后一次目标页，onNavigate 注册时补发，避免冷启动丢事件。
+let navigateHandler = null;
+let pendingNav = null;
+ipcRenderer.on('navio:navigate', (_e, tab) => {
+  if (navigateHandler) navigateHandler(tab);
+  else pendingNav = tab;
+});
+
 contextBridge.exposeInMainWorld('navioAdmin', {
   // 服务
   status: () => invoke('admin:status'),
@@ -45,5 +54,13 @@ contextBridge.exposeInMainWorld('navioAdmin', {
   minimize: () => ipcRenderer.send('win:minimize'),
   hide: () => ipcRenderer.send('win:hide'),
   onToast: (cb) => ipcRenderer.on('toast', (_e, m) => cb(m)),
-  onStatus: (cb) => ipcRenderer.on('admin:status-changed', () => cb())
+  onStatus: (cb) => ipcRenderer.on('admin:status-changed', () => cb()),
+  onNavigate: (cb) => {
+    navigateHandler = cb;
+    if (pendingNav != null) {
+      const t = pendingNav;
+      pendingNav = null;
+      cb(t);
+    }
+  }
 });

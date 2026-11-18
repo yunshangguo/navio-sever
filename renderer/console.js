@@ -443,6 +443,8 @@
 
   API.onToast((m) => toast(m));
   API.onStatus(() => load());
+  // 托盘「设置…」直达：主进程通知切到指定页（如「服务与端口」）
+  if (API.onNavigate) API.onNavigate((tab) => { if (tab) load(tab); });
   API.version().then((v) => ($('#verLine').textContent = 'v' + (v.app || '2.0.0')));
   load('overview');
 })();

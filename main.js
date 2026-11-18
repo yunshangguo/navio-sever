@@ -393,7 +393,7 @@ function registerAdminIpc() {
 }
 
 /* ==================== 窗口 ==================== */
-function createConsoleWindow() {
+function createConsoleWindow(initialTab) {
   win = new BrowserWindow({
     width: 1060,
     height: 720,
@@ -415,6 +415,11 @@ function createConsoleWindow() {
   win.once('ready-to-show', () => {
     win.show();
     win.focus();
+    // 托盘「设置…」冷启动时，等页面 ready 后再通知切到目标页
+    if (initialTab) {
+      try { win.webContents.send('navio:navigate', initialTab); }
+      catch (e) { crashLog('navigate', e); }
+    }
   });
   win.on('close', (e) => {
     if (!quitting) {
@@ -435,6 +440,7 @@ function createTray() {
     tray = new Tray(img.resize({ width: 20, height: 20 }));
     const menu = Menu.buildFromTemplate([
       { label: '打开服务端控制台', click: () => showWindow() },
+      { label: '设置…', click: () => showWindow('service') },
       { label: '在浏览器中打开 Navio', click: () => shell.openExternal(localUrl()) },
       { type: 'separator' },
       {
@@ -464,11 +470,16 @@ function createTray() {
     crashLog('createTray', e);
   }
 }
-function showWindow() {
-  if (!win) createConsoleWindow();
-  else {
+function showWindow(tab) {
+  if (!win) {
+    createConsoleWindow(tab);
+  } else {
     win.show();
     win.focus();
+    if (tab) {
+      try { win.webContents.send('navio:navigate', tab); }
+      catch (e) { crashLog('navigate', e); }
+    }
   }
 }
 function relaunchWithGpuMode(useSoftware) {
