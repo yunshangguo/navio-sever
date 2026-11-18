@@ -1841,6 +1841,28 @@
       ]);
     });
 
+    // 左侧分类右键：与主区域分组头保持一致的菜单
+    const sidebar = $('#sidebar');
+    if (sidebar) {
+      sidebar.addEventListener('contextmenu', (e) => {
+        const item = e.target.closest('.side-item[data-key]');
+        if (!item) return;
+        e.preventDefault();
+        e.stopPropagation();
+        hideCtx();
+        const gid = item.dataset.key;
+        if (gid === '__add') return; // 「新建标签」不走分类菜单
+        const g = S.groups.find((x) => x.id === gid);
+        if (!g) return;
+        showCtx(e.clientX, e.clientY, [
+          { key: 'addB', label: '在此分类添加书签', icon: IC.plus, run: () => addBookmarkAt(gid) },
+          { key: 'rename', label: '重命名分类', icon: IC.edit, run: () => openGroupDialog(g) },
+          { sep: true },
+          { key: 'delg', label: '删除分类', icon: IC.trash, danger: true, run: () => deleteGroup(gid) }
+        ]);
+      });
+    }
+
     document.addEventListener('click', () => hideCtx());
     window.addEventListener('blur', () => hideCtx());
 
@@ -1959,6 +1981,50 @@
       }
       DRAG = null;
     });
+
+    // 左侧分类作为拖放目标：把书签卡片拖到分类上即移动过去
+    const sidebar = $('#sidebar');
+    if (sidebar) {
+      const clearSideHover = () => {
+        $$('.side-item.cat-drop').forEach((el) => el.classList.remove('cat-drop'));
+        sidebar.classList.remove('cat-drop-root');
+      };
+
+      sidebar.addEventListener('dragover', (e) => {
+        if (!DRAG || DRAG.type !== 'bookmark') return;
+        const item = e.target.closest('.side-item[data-key]');
+        if (!item || item.dataset.key === '__add') return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        clearSideHover();
+        item.classList.add('cat-drop');
+        sidebar.classList.add('cat-drop-root');
+      });
+
+      sidebar.addEventListener('dragleave', (e) => {
+        if (e.target === sidebar || !sidebar.contains(e.relatedTarget)) clearSideHover();
+      });
+
+      sidebar.addEventListener('drop', (e) => {
+        if (!DRAG || DRAG.type !== 'bookmark') return;
+        const item = e.target.closest('.side-item[data-key]');
+        clearSideHover();
+        if (!item || item.dataset.key === '__add') return;
+        e.preventDefault();
+        const gid = item.dataset.key;
+        const b = S.bookmarks.find((x) => x.id === DRAG.id);
+        const targetG = S.groups.find((x) => x.id === gid);
+        DRAG = null;
+        if (!b || !targetG) return;
+        if (b.groupId === gid) {
+          toast('已在此分类');
+          return;
+        }
+        const n = countOf(gid);
+        moveBookmark(b.id, gid, 9999);
+        toast('已移动到「' + targetG.name + '」· ' + (n + 1) + ' 项');
+      });
+    }
   }
 
   /* ================= 显示开关应用 ================= */

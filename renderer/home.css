@@ -155,6 +155,14 @@ body { display: block; }
   background: linear-gradient(180deg, #6aa6ff, #8b5cf6);
   box-shadow: 0 0 12px rgba(99, 160, 255, .75);
 }
+/* 拖动书签经过分类时的投放高亮 */
+.side-item.cat-drop {
+  background: rgba(99, 160, 255, .16);
+  border-color: rgba(99, 160, 255, .55);
+  color: var(--h-text);
+  box-shadow: inset 0 0 0 1px rgba(99, 160, 255, .22);
+}
+.side-item.cat-drop .side-ico { color: #cfe0ff; }
 .side-ico {
   width: 24px; height: 24px; flex: none;
   border-radius: 8px;
