@@ -114,10 +114,31 @@ class Spaces {
   constructor(store, rendererDir) {
     this.store = store;
     this.rendererDir = rendererDir || '';
+    // 未登录游客快照只存内存，进程重启即清空，永不写入 data.json。
+    // key = anon_<32hex>，value = normalize 后的 state。
+    this.volatiles = new Map();
   }
 
   top() {
     return this.store.state || {};
+  }
+
+  /** 游客身份 id（未登录 anon cookie）判定 */
+  isVolatileId(identityId) {
+    return /^anon_[a-f0-9]{32}$/.test(String(identityId || ''));
+  }
+
+  /** 取游客内存快照（无则返回 null）；仅游客身份有效 */
+  volatileSnapshot(identityId) {
+    if (!this.isVolatileId(identityId)) return null;
+    return this.volatiles.has(identityId) ? this.volatiles.get(identityId) : null;
+  }
+
+  /** 该身份是否已有快照（含游客内存快照），供前端决定是否显示「恢复通用书签」 */
+  hasSnapshotView(identityId) {
+    if (this.isVolatileId(identityId)) return this.volatiles.has(identityId);
+    const st = this.top();
+    return !!(st.spaces && st.spaces[identityId]);
   }
 
   /**
@@ -301,10 +322,15 @@ class Spaces {
     return out;
   }
 
-  /** 按身份取视图：有快照用快照，没有就用公共模板 */
+  /** 按身份取视图：游客读内存快照，登录用户读磁盘快照，都没有就用公共模板 */
   view(identityId) {
     const st = this.top();
-    const own = st.spaces && st.spaces[identityId];
+    let own = null;
+    if (this.isVolatileId(identityId)) {
+      own = this.volatiles.get(identityId);
+    } else {
+      own = st.spaces && st.spaces[identityId];
+    }
     let base;
     if (own && typeof own === 'object') {
       base = normalize(own);
@@ -316,30 +342,42 @@ class Spaces {
     return this.annotate(this.project(base, pubIds), pubIds);
   }
 
-  /** 保存个人快照：只写 spaces[id]，绝不触碰顶层公共模板 */
+  /** 保存个人快照：游客只写内存；登录用户写 spaces[id]，绝不触碰顶层公共模板 */
   save(identityId, incoming) {
-    const st = this.store.state;
     const clean = normalize(incoming);
     delete clean.spaces; // 防止前端把整个视图（含 spaces）回传造成嵌套膨胀
+    if (this.isVolatileId(identityId)) {
+      this.volatiles.set(identityId, clean);
+      return { ok: true, volatile: true };
+    }
+    const st = this.store.state;
     st.spaces = st.spaces || {};
     st.spaces[identityId] = clean;
     this.store.save(st, 500);
     return { ok: true };
   }
 
-  /** 立即落盘（页面关闭 / 切后台） */
+  /** 立即保存（页面关闭 / 切后台）：游客只写内存，登录用户落盘 */
   flush(identityId, incoming) {
-    const st = this.store.state;
     const clean = normalize(incoming);
     delete clean.spaces;
+    if (this.isVolatileId(identityId)) {
+      this.volatiles.set(identityId, clean);
+      return { ok: true, volatile: true };
+    }
+    const st = this.store.state;
     st.spaces = st.spaces || {};
     st.spaces[identityId] = clean;
     this.store.saveSync(st);
     return { ok: true };
   }
 
-  /** 丢弃个人快照，重新回到公共模板（用于通用书签更新后重新同步） */
+  /** 丢弃个人快照，重新回到公共模板；游客只清内存 */
   reset(identityId) {
+    if (this.isVolatileId(identityId)) {
+      this.volatiles.delete(identityId);
+      return { ok: true };
+    }
     const st = this.store.state;
     if (st.spaces && st.spaces[identityId]) {
       delete st.spaces[identityId];

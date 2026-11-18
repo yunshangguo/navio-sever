@@ -207,8 +207,12 @@ function mineIds(st) { return (st.bookmarks || []).filter((b) => b.scope === 'mi
   ck('重新开启公共模式后恢复 200', (await req('/')).status === 200);
 
   const spaceKeys = Object.keys(store.state.spaces || {});
-  // 只有真正保存过（或被继承）的身份才有快照；没改过的身份不生成垃圾空间
-  ck('各身份快照彼此独立', spaceKeys.length >= 3 && new Set(spaceKeys).size === spaceKeys.length, spaceKeys);
+  // 阶段15：游客快照只存内存、永不落盘；磁盘只保留真正保存过的登录账号。
+  // bob 登录后只读未保存，不生成空间——这是「没改过不产生垃圾空间」的正确行为。
+  ck('磁盘快照彼此独立（key 唯一）', new Set(spaceKeys).size === spaceKeys.length, spaceKeys);
+  ck('磁盘不含任何游客 anon 快照（游客不落盘）', !spaceKeys.some((k) => /^anon_/.test(k)), spaceKeys);
+  ck('登录管理员快照已落盘', spaceKeys.includes('u_admin'), spaceKeys);
+  ck('游客编辑后登录迁移的账号快照已落盘', spaceKeys.some((k) => k !== 'u_admin' && /^u_/.test(k)), spaceKeys);
 
   await svr.stop();
   console.log('\n结果: ' + pass + '/' + (pass + fail) + ' PASS');

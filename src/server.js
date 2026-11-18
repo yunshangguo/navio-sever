@@ -373,14 +373,17 @@ class NavioServer {
       const b = await readBody(req).catch(() => ({}));
       const r = this.auth.login(b.username, b.password, ip, req.headers['user-agent']);
       if (!r.ok) return json(res, 401, { ok: false, code: r.code, error: r.error });
-      // 游客先编辑过再登录：若该账号还没有快照，把匿名快照一次性迁过去
+      // 游客先编辑过再登录：若该账号还没有快照，把游客的内存快照一次性迁过去并落盘。
+      // 游客快照从不落盘，只存在于 spaces.volatiles；登录是「转为持久身份」的合法迁移。
       try {
         const anon = this.auth.cookieValue(req.headers.cookie, (cfg.publicMode || {}).cookieName || 'navio_anon');
         const st = this.store.state;
         st.spaces = st.spaces || {};
-        if (anon && /^anon_[a-f0-9]{32}$/.test(anon) && st.spaces[anon] && r.user && r.user.id && !st.spaces[r.user.id]) {
-          st.spaces[r.user.id] = st.spaces[anon];
+        const memo = anon ? this.spaces.volatileSnapshot(anon) : null;
+        if (memo && r.user && r.user.id && !st.spaces[r.user.id]) {
+          st.spaces[r.user.id] = normalize(memo);
           this.store.saveSync(st);
+          this.spaces.volatiles.delete(anon);
         }
       } catch (_) {}
       return json(res, 200, { ok: true, user: r.user, mustChangePassword: !!r.user.mustChangePassword }, { 'Set-Cookie': this.auth.sessionCookie(r.token, r.ttl) });
@@ -628,7 +631,6 @@ class NavioServer {
     /* --- 状态：公共模板只读 + 每人一份独立快照 --- */
     if (pathname === '/api/state' && method === 'GET') {
       const meta = this.store.stats();
-      const spaces = this.store.state.spaces || {};
       return json(res, 200, {
         state: this.spaces.view(who.id), meta, dataDir: null,
         user: sess ? sess.user : { id: who.id, username: who.name, role: 'guest' },
@@ -637,7 +639,7 @@ class NavioServer {
           enabled: pcfg.enabled !== false,
           groupName: pcfg.groupName || PUBLIC_NAME,
           canEdit: !guest || pcfg.anonymousEdit !== false,
-          hasSnapshot: !!spaces[who.id]
+          hasSnapshot: this.spaces.hasSnapshotView(who.id)
         }
       });
     }
