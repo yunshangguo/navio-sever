@@ -26,6 +26,7 @@ const { parseNetscape, buildNetscape, parseChromiumBookmarks } = require('./impo
 const preset = require('./preset-icons');
 const presetColors = require('./preset-colors');
 const { SiteIcons } = require('./site-icons');
+const { siteInfo } = require('./favicon');
 const weather = require('./weather');
 
 const MIME = {
@@ -448,15 +449,47 @@ class NavioServer {
   }
 
   /* ---------------- 图标（五级降级：缓存 → 真实图标包 → 在线 → 自绘 → 首字母） ---------------- */
+  /**
+   * 由 host 参数（可能带端口）或完整 url 推断用于抓取的真实 origin。
+   * 本地/内网地址走 http 并保留端口；公网域名走 https。
+   * 返回 null 表示无法推断（例如纯域名也不算错，会退回 https 拼接）。
+   */
+  iconOrigin(hostParam, urlParam) {
+    const raw = String(urlParam || '').trim();
+    if (raw) {
+      const info = siteInfo(raw);
+      if (info) return info.origin;
+    }
+    const h = String(hostParam || '').trim();
+    if (!h) return null;
+    // 已经是带协议的地址
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(h)) {
+      const info = siteInfo(h);
+      return info ? info.origin : null;
+    }
+    // 本地 / 内网 / 环回 → http；公网 → https
+    const bare = h.replace(/^\[/, '').replace(/^www\./i, '');
+    const local = /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[?::1\]?|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/i.test(bare);
+    try {
+      const u = new URL((local ? 'http://' : 'https://') + h);
+      return u.origin;
+    } catch (_) {
+      return null;
+    }
+  }
+
   async icon(req, res, u) {
-    const host = preset.cleanHost(u.searchParams.get('host') || '');
+    const hostParam = u.searchParams.get('host') || '';
     const title = String(u.searchParams.get('title') || '');
-    const raw = String(u.searchParams.get('url') || (host ? 'https://' + host : ''));
-    if (!host) return json(res, 400, { ok: false, error: '缺少 host' });
+    // 前端 host 参数来自 URL.host，可能带端口（如 127.0.0.1:6363）。
+    // 抓取目标必须保留端口并选对协议：本地/内网地址走 http，公网走 https。
+    const originHint = this.iconOrigin(hostParam, u.searchParams.get('url'));
+    const host = preset.cleanHost(hostParam || String(u.searchParams.get('url') || ''));
+    if (!host && !originHint) return json(res, 400, { ok: false, error: '缺少 host' });
 
     const c = this.cfg();
-    // 1. 本地缓存
-    const cached = this.icons.findCached(host);
+    // 1. 本地缓存（用真实 origin 作键，本地不同端口互不串图）
+    const cached = originHint ? this.icons.findCached(originHint) : this.icons.findCached(host);
     if (cached) {
       try {
         const buf = fs.readFileSync(cached);
@@ -477,11 +510,11 @@ class NavioServer {
         });
       } catch (_) {}
     }
-    // 3. 在线抓取
+    // 3. 在线抓取（本地地址带端口 + http；公网 https）
     if (c.icons && c.icons.fetchEnabled) {
       try {
         const r = await Promise.race([
-          this.icons.get(raw),
+          this.icons.get(originHint || (host ? 'https://' + host : '')),
           new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), c.icons.timeoutMs || 6000))
         ]);
         if (r) {
@@ -492,7 +525,7 @@ class NavioServer {
     }
     // 4. 内置自绘图标库（仅在前三级都失败时兜底）
     if (!c.icons || c.icons.presetFallback !== false) {
-      const item = preset.match(host, title || raw);
+      const item = preset.match(host, title || originHint || host);
       if (item) {
         return send(res, 200, preset.renderSvg(item), {
           'Content-Type': 'image/svg+xml; charset=utf-8',
@@ -552,7 +585,12 @@ class NavioServer {
     /* --- 图标 / 图标库 --- */
     if (pathname === '/api/icon') return this.icon(req, res, u);
     if (pathname === '/api/icon/refresh' && method === 'POST') {
-      const host = preset.cleanHost(body && body.url);
+      const rawUrl = body && (body.url || body.host);
+      const host = preset.cleanHost(rawUrl || '');
+      // 用真实 origin 清缓存（保留协议+端口），与抓取/persist 的键一致，
+      // 否则本地带端口地址（如 127.0.0.1:6363）清不掉旧缓存、memMiss 也会残留。
+      const origin = this.iconOrigin('', rawUrl);
+      if (origin) this.icons.clear(origin);
       if (host) this.icons.clear(host);
       return json(res, 200, { ok: true, host });
     }
