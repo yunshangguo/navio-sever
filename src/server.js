@@ -56,18 +56,20 @@ const PUBLIC_API = new Set([
 ]);
 
 function send(res, code, body, headers) {
+  const extra = res.__navioExtra || {};
   const h = {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'no-referrer',
     'Cache-Control': 'no-store',
-    ...(res.__navioExtra || {}),
+    ...extra,
     ...(headers || {})
   };
-  // 登录接口自身也要下发 session cookie，两个 Set-Cookie 合并成数组
-  if (res.__navioExtra && res.__navioExtra['Set-Cookie'] && headers && headers['Set-Cookie']) {
-    h['Set-Cookie'] = [].concat(res.__navioExtra['Set-Cookie'], headers['Set-Cookie']);
-  }
+  // 可能同时下发「匿名身份 cookie」与「会话/清理 cookie」：
+  // 统一扁平化成数组，兼容调用方传字符串或数组两种情况。
+  const ec = extra['Set-Cookie'];
+  const hc = headers && headers['Set-Cookie'];
+  if (ec || hc) h['Set-Cookie'] = [].concat(ec || [], hc || []).flat().filter(Boolean);
   res.writeHead(code, h);
   res.end(body);
 }
@@ -161,6 +163,9 @@ class NavioServer {
     this.startedAt = null;
     this.requestCount = 0;
     this.rateMap = new Map(); // ip -> {n, reset}
+    // 退出后轮换出的新 anon id → 过期时间戳。窗口内该身份携带「私有内容」的写入
+    // 一律视为旧登录态 beforeunload 的迟到 flush 而忽略，避免个人书签串到游客视图。
+    this.logoutQuarantine = new Map();
     this.onRestart = o.onRestart || null;
     this.spaces = new Spaces(this.store, this.rendererDir);
     this.siteIcons = new SiteIcons(this.rendererDir); // 打包在各站点官网抓取的真实 favicon
@@ -382,7 +387,19 @@ class NavioServer {
     }
     if (pathname === '/api/auth/logout' && req.method === 'POST') {
       this.auth.logout(token);
-      return json(res, 200, { ok: true }, { 'Set-Cookie': this.auth.clearCookie() });
+      // 退出后轮换匿名身份：旧的 anon 快照可能已被登录态的 beforeunload flush 污染，
+      // 换一个全新的 anon id 才能让访客重新看到公共模板（默认书签），避免串到登录后的个人书签。
+      const pmOut = cfg.publicMode || {};
+      const anonName = pmOut.cookieName || 'navio_anon';
+      const freshAnon = 'anon_' + crypto.randomBytes(16).toString('hex');
+      const daysOut = Number(pmOut.cookieTtlDays) || 365;
+      const anonCookie = anonName + '=' + freshAnon + '; HttpOnly; SameSite=Lax; Path=/; Max-Age=' + Math.floor(daysOut * 86400);
+      this.logoutQuarantine.set(freshAnon, Date.now() + 8000);
+      if (this.logoutQuarantine.size > 64) {
+        const now = Date.now();
+        for (const [k, exp] of this.logoutQuarantine) if (exp < now) this.logoutQuarantine.delete(k);
+      }
+      return json(res, 200, { ok: true }, { 'Set-Cookie': [this.auth.clearCookie(), anonCookie] });
     }
     if (pathname === '/api/auth/session') {
       return json(res, 200, {
@@ -570,6 +587,33 @@ class NavioServer {
     return send(res, 404, '');
   }
 
+  /**
+   * 判断一次游客写入是否是「刚退出登录的旧会话迟到 flush」。
+   * 退出时服务端轮换出一个全新 anon id 并把它加入 8 秒隔离窗口；
+   * 若窗口内该 anon 提交的数据携带 scope='mine' 的书签/分组（游客初始视图不会有），
+   * 说明这是登录态 beforeunload 污染回写，忽略掉，避免个人书签串进游客视图。
+   */
+  _isStaleLogoutFlush(identityId, body) {
+    const exp = this.logoutQuarantine && this.logoutQuarantine.get(identityId);
+    if (!exp) return false;
+    if (Date.now() > exp) {
+      this.logoutQuarantine.delete(identityId);
+      return false;
+    }
+    if (!body || typeof body !== 'object') return false;
+    // 游客的初始视图只有系统公共分组（g_common / g_public / g_more / g_cat_*）。
+    // 出现任何其它分组（带不带 scope 都算），或个人书签，即为登录态残留数据。
+    const isPublicGid = (id) => /^(g_common|g_public|g_more|g_cat_)/.test(String(id || ''));
+    const hasPrivateGroup = Array.isArray(body.groups) && body.groups.some((g) => g && !isPublicGid(g.id));
+    const hasMineScope = (Array.isArray(body.bookmarks) && body.bookmarks.some((b) => b && b.scope === 'mine')) ||
+      (Array.isArray(body.groups) && body.groups.some((g) => g && g.scope === 'mine'));
+    if (!hasPrivateGroup && !hasMineScope) return false;
+    // 命中：解除隔离（旧 flush 只会有一次），后续游客的真实编辑可正常写入
+    this.logoutQuarantine.delete(identityId);
+    this.log('忽略退出后迟到的登录态 flush: ' + identityId);
+    return true;
+  }
+
   /* ---------------- API ---------------- */
   async api(req, res, pathname, u, uid, role, ip, sess, ident, pm) {
     const method = req.method;
@@ -599,10 +643,12 @@ class NavioServer {
     }
     if (pathname === '/api/state' && method === 'POST') {
       if (guest && pcfg.anonymousEdit === false) return json(res, 401, { ok: false, code: 'need_login', error: '请先登录后再保存' });
+      if (this._isStaleLogoutFlush(who.id, body)) return json(res, 200, { ok: true, ignored: 'stale-logout-flush' });
       return json(res, 200, this.spaces.save(who.id, body));
     }
     if (pathname === '/api/state/flush' && method === 'POST') {
       if (guest && pcfg.anonymousEdit === false) return json(res, 401, { ok: false, code: 'need_login', error: '请先登录后再保存' });
+      if (this._isStaleLogoutFlush(who.id, body)) return json(res, 200, { ok: true, ignored: 'stale-logout-flush' });
       return json(res, 200, this.spaces.flush(who.id, body));
     }
     if (pathname === '/api/state/reset' && method === 'POST') return json(res, 200, this.spaces.reset(who.id));

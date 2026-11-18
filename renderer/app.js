@@ -1898,8 +1898,13 @@
       }
     });
 
-    // 退出前落盘
+    // 供 Web 端退出流程先落盘登录态改动（在清除会话、轮换匿名身份之前执行）
+    window.__navioFlushPending = () => (pendingSave && S ? flush() : Promise.resolve());
+
+    // 退出前落盘。但退出登录流程中禁止回写：
+    // 此时会话已清、服务端已轮换 anon 身份，若把登录后的 S 写下去会污染游客快照。
     window.addEventListener('beforeunload', () => {
+      if (window.__navioLoggingOut) return;
       if (pendingSave) API.flush(S);
     });
 

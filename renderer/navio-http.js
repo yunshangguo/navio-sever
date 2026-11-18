@@ -245,6 +245,12 @@
     if (btnPw) btnPw.hidden = !authed;
     if (btnOut) {
       btnOut.onclick = async () => {
+        // 必须先同步置位：location.href 触发的 beforeunload 不能再把登录后的状态
+        // 以「服务端轮换出的新游客身份」回写，否则私有书签会串到游客视图。
+        window.__navioLoggingOut = true;
+        // 退出前把当前登录态的待保存改动落盘（此时会话仍有效，写到自己的空间）。
+        // 用普通 saveState（非 keepalive），确保请求在退出前真正完成、用的是管理员会话。
+        try { if (window.__navioFlushPending) await window.__navioFlushPending(); } catch (_) {}
         await call('/auth/logout', {});
         location.href = '/';
       };
