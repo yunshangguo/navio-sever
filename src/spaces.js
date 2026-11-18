@@ -265,9 +265,25 @@ class Spaces {
     });
 
     // 阶段 11：系统预设分类只剩「常用」一组，带预设分类图标。
+    // 阶段 13：若个人快照里存在同 id 的分组且带 custom 标记（用户右键改过名称/图标/顺序），
+    // 则尊重个人快照值；否则仍用预设覆盖。顶层公共模板永不被写，隔离语义不变。
     const defs = cat.defs.filter((g) => g.id === COMMON_GID);
     const pub = defs
-      .map((g) => ({ id: g.id, name: g.name, color: g.color || '', icon: g.icon || '', order: g.order, collapsed: false }));
+      .map((g) => {
+        const own = groups.find((x) => x.id === g.id && x.custom);
+        if (own) {
+          return {
+            id: g.id,
+            name: own.name || g.name,
+            color: own.color || g.color || '',
+            icon: own.icon || '',
+            order: Number.isFinite(own.order) ? own.order : g.order,
+            collapsed: !!own.collapsed,
+            custom: true
+          };
+        }
+        return { id: g.id, name: g.name, color: g.color || '', icon: g.icon || '', order: g.order, collapsed: false };
+      });
 
     out.groups = [...pub, ...privateGroups];
     out.bookmarks = books;

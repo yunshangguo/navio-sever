@@ -209,6 +209,34 @@ const pubGroups = (v) => v.groups.filter((g) => g.scope === 'public');
     !isCommonHost('notbaidu.com') && !isCommonUrl('https://example.com'));
   ck('MORE_GID 仍被识别为公共分组（历史兜底）', isPublicGid(MORE_GID));
 
+  /* ---------- 8. 阶段13：公共分类个人编辑（名称/图标/顺序）持久化且隔离 ---------- */
+  const topSnapshot = JSON.stringify(store.state.groups);
+  const cv = spaces.view('anon_custom13');
+  const cg = cv.groups.find((x) => x.id === COMMON_GID);
+  cg.name = '我的常用';
+  cg.icon = 'data:image/svg+xml,<svg>custom</svg>';
+  cg.order = 500;
+  cg.custom = true;
+  spaces.save('anon_custom13', cv);
+  const cv2 = spaces.view('anon_custom13');
+  const cg2 = cv2.groups.find((x) => x.id === COMMON_GID);
+  ck('公共分类改名/图标/顺序在个人快照中持久化',
+    cg2.name === '我的常用' && cg2.icon === 'data:image/svg+xml,<svg>custom</svg>' && cg2.order === 500,
+    { name: cg2.name, order: cg2.order });
+  ck('被编辑的公共分类 scope 仍为 public', cg2.scope === 'public');
+  ck('个人编辑不动顶层公共模板', JSON.stringify(store.state.groups) === topSnapshot);
+  const cgOther = spaces.view('anon_other13').groups.find((x) => x.id === COMMON_GID);
+  ck('其他身份看到的公共分类仍是预设',
+    cgOther.name === '常用' && /^data:image\/svg\+xml/.test(cgOther.icon || '') && cgOther.order === -1000,
+    { name: cgOther.name, order: cgOther.order });
+  const nv = spaces.view('anon_nocustom13');
+  const ng = nv.groups.find((x) => x.id === COMMON_GID);
+  ng.name = '临时改名';
+  delete ng.custom;
+  spaces.save('anon_nocustom13', nv);
+  const ng2 = spaces.view('anon_nocustom13').groups.find((x) => x.id === COMMON_GID);
+  ck('未打 custom 的快照仍被预设覆盖', ng2.name === '常用', ng2.name);
+
   /* ---------- 汇总 ---------- */
   const pass = results.filter((r) => r.ok).length;
   console.log(`\nRESULT ${pass}/${results.length} PASS`);

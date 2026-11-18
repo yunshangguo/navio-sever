@@ -652,6 +652,34 @@
     render();
   }
 
+  /**
+   * 在「同一 scope」的分类组内移动：'up' / 'down' / 'top' / 'bottom'。
+   * 公共分类（scope=public，如「常用」）与私有标签（scope=mine）互不混排；
+   * 移动后重排该 scope 组的 order，并给被移动项打 custom 标记，
+   * 使服务端 project 保留这个顺序（否则公共分类会被预设 order 覆盖回去）。
+   */
+  function moveGroupTo(gid, dir) {
+    const g = S.groups.find((x) => x.id === gid);
+    if (!g) return;
+    const scope = g.scope || 'mine';
+    const peers = orderedGroups().filter((x) => (x.scope || 'mine') === scope);
+    const cur = peers.findIndex((x) => x.id === gid);
+    if (cur < 0) return;
+    let to = cur;
+    if (dir === 'up') to = cur - 1;
+    else if (dir === 'down') to = cur + 1;
+    else if (dir === 'top') to = 0;
+    else if (dir === 'bottom') to = peers.length - 1;
+    if (to === cur || to < 0 || to >= peers.length) return; // 已在边界，静默
+    peers.splice(to, 0, peers.splice(cur, 1)[0]);
+    peers.forEach((x, i) => {
+      x.order = i;
+      if (x.scope === 'public') x.custom = true; // 公共分类顺序需持久化为个人覆盖
+    });
+    scheduleSave();
+    render();
+  }
+
   function deleteBookmark(id) {
     const b = S.bookmarks.find((x) => x.id === id);
     if (!b) return;
@@ -1170,6 +1198,13 @@
           if (isEdit) {
             existing.name = v;
             existing.icon = pickedIcon;
+            // 公共分类（scope=public）默认被服务端 project 用预设覆盖；
+            // 打上 custom 后服务端会尊重个人快照里的名称/图标改动（不碰顶层模板）。
+            // 若改回默认图标且名字仍是"常用"，则退回预设（清掉标记）。
+            if (existing.scope === 'public') {
+              if (v === '常用' && !pickedIcon) delete existing.custom;
+              else existing.custom = true;
+            }
           } else {
             const g = addGroup(v);
             if (pickedIcon) { g.icon = pickedIcon; scheduleSave(); }
@@ -1659,6 +1694,31 @@
     $('#ctxMenu').classList.add('hidden');
   }
 
+  /**
+   * 分组 / 分类右键菜单项：左侧分类与主区域分组头共用，保证两处功能一致。
+   * 三项编辑能力：在此分类添加书签、编辑分类（名称+图标）、删除分类；
+   * 外加同 scope 组内排序（上移 / 下移 / 置顶 / 置底），仅多于一个同类时显示。
+   */
+  function groupCtxItems(g) {
+    const gid = g.id;
+    const scope = g.scope || 'mine';
+    const peers = orderedGroups().filter((x) => (x.scope || 'mine') === scope);
+    const items = [
+      { key: 'addB', label: '在此分类添加书签', icon: IC.plus, run: () => addBookmarkAt(gid) },
+      { key: 'edit', label: '编辑分类…', icon: IC.edit, run: () => openGroupDialog(g) }
+    ];
+    if (peers.length > 1) {
+      items.push({ sep: true });
+      items.push({ key: 'top', label: '移到最前', icon: IC.top, run: () => moveGroupTo(gid, 'top') });
+      items.push({ key: 'up', label: '上移一位', icon: IC.up, run: () => moveGroupTo(gid, 'up') });
+      items.push({ key: 'down', label: '下移一位', icon: IC.down, run: () => moveGroupTo(gid, 'down') });
+      items.push({ key: 'bottom', label: '移到最后', icon: IC.bottom, run: () => moveGroupTo(gid, 'bottom') });
+    }
+    items.push({ sep: true });
+    items.push({ key: 'delg', label: '删除分类', icon: IC.trash, danger: true, run: () => deleteGroup(gid) });
+    return items;
+  }
+
   const IC = {
     open: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M20 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5"/></svg>',
     edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
@@ -1668,7 +1728,11 @@
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
     refresh: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>',
     resize: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg>',
-    palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h5a4 4 0 0 0 4-4 5 5 0 0 0-5-5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/></svg>'
+    palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18h1.5a2 2 0 0 0 0-4H12a2 2 0 0 1 0-4h5a4 4 0 0 0 4-4 5 5 0 0 0-5-5z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/></svg>',
+    up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
+    down: '<svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
+    top: '<svg viewBox="0 0 24 24"><path d="M5 4h14M12 8v11M7 14l5 5 5-5"/></svg>',
+    bottom: '<svg viewBox="0 0 24 24"><path d="M5 20h14M12 16V5M7 10l5-5 5 5"/></svg>'
   };
 
   /* ================= 事件绑定 ================= */
@@ -1834,12 +1898,7 @@
         const gid = head.dataset.gid;
         const g = S.groups.find((x) => x.id === gid);
         if (!g) return;
-        return showCtx(e.clientX, e.clientY, [
-          { key: 'addB', label: '在此分组添加书签', icon: IC.plus, run: () => addBookmarkAt(gid) },
-          { key: 'rename', label: '重命名分组', icon: IC.edit, run: () => openGroupDialog(g) },
-          { sep: true },
-          { key: 'delg', label: '删除分组', icon: IC.trash, danger: true, run: () => deleteGroup(gid) }
-        ]);
+        return showCtx(e.clientX, e.clientY, groupCtxItems(g));
       }
       // 空白处
       showCtx(e.clientX, e.clientY, [
@@ -1863,12 +1922,7 @@
         if (gid === '__add') return; // 「新建标签」不走分类菜单
         const g = S.groups.find((x) => x.id === gid);
         if (!g) return;
-        showCtx(e.clientX, e.clientY, [
-          { key: 'addB', label: '在此分类添加书签', icon: IC.plus, run: () => addBookmarkAt(gid) },
-          { key: 'rename', label: '重命名分类', icon: IC.edit, run: () => openGroupDialog(g) },
-          { sep: true },
-          { key: 'delg', label: '删除分类', icon: IC.trash, danger: true, run: () => deleteGroup(gid) }
-        ]);
+        showCtx(e.clientX, e.clientY, groupCtxItems(g));
       });
     }
 

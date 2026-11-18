@@ -105,7 +105,10 @@ function normalize(input) {
         color: str(g.color, 32) || '',
         icon: str(g.icon, 400000) || '',
         order: num(g.order, i),
-        collapsed: !!g.collapsed
+        collapsed: !!g.collapsed,
+        // 阶段13：公共分类（常用）被用户显式改过名称/图标/顺序时打此标记，
+        // project() 据此尊重个人快照值，而不是每次用系统预设覆盖。
+        custom: !!g.custom
       });
     });
   }
