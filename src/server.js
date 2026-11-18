@@ -478,6 +478,24 @@ class NavioServer {
     }
   }
 
+  /**
+   * https 抓取失败后是否值得回退到 http。
+   * 仅对「带端口的地址」或「内网域名后缀」返回 http origin；公网普通域名返回 null。
+   * 内网域名后缀（路由器 hosts / mDNS 常见）：.local .lan .home .internal .test .home.arpa 等。
+   */
+  httpFallbackOrigin(origin, host) {
+    const raw = String(origin || '');
+    if (!/^https:\/\//i.test(raw)) return null;
+    let u;
+    try { u = new URL(raw); } catch (_) { return null; }
+    const hostname = u.hostname.replace(/^\[|\]$/g, '').toLowerCase();
+    const hasPort = !!u.port && u.port !== '443';
+    const lanSuffix = /\.(local|lan|home|internal|intranet|test|home\.arpa|localhost)$/i.test(hostname) ||
+      hostname === 'localhost';
+    if (!hasPort && !lanSuffix) return null;
+    return 'http://' + u.host; // 保留端口
+  }
+
   async icon(req, res, u) {
     const hostParam = u.searchParams.get('host') || '';
     const title = String(u.searchParams.get('title') || '');
@@ -512,16 +530,31 @@ class NavioServer {
     }
     // 3. 在线抓取（本地地址带端口 + http；公网 https）
     if (c.icons && c.icons.fetchEnabled) {
+      const timeoutMs = c.icons.timeoutMs || 6000;
+      const primary = originHint || (host ? 'https://' + host : '');
+      const grab = (target) => Promise.race([
+        this.icons.get(target),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), timeoutMs))
+      ]);
       try {
-        const r = await Promise.race([
-          this.icons.get(originHint || (host ? 'https://' + host : '')),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), c.icons.timeoutMs || 6000))
-        ]);
+        const r = await grab(primary);
         if (r) {
           const buf = r.file ? fs.readFileSync(r.file) : r.buf;
           if (buf) return send(res, 200, buf, { 'Content-Type': r.type || 'image/png', 'Cache-Control': 'public, max-age=86400' });
         }
       } catch (_) {}
+      // 3b. 协议回退：内网域名/带端口服务常被前端补成 https，失败后再用 http 抓一次。
+      //     只对带端口或内网域名后缀的地址回退，避免公网域名无谓翻倍请求。
+      const fallback = this.httpFallbackOrigin(primary, host);
+      if (fallback) {
+        try {
+          const r = await grab(fallback);
+          if (r) {
+            const buf = r.file ? fs.readFileSync(r.file) : r.buf;
+            if (buf) return send(res, 200, buf, { 'Content-Type': r.type || 'image/png', 'Cache-Control': 'public, max-age=86400' });
+          }
+        } catch (_) {}
+      }
     }
     // 4. 内置自绘图标库（仅在前三级都失败时兜底）
     if (!c.icons || c.icons.presetFallback !== false) {

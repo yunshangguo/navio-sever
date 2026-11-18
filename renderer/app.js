@@ -84,10 +84,17 @@
     // 历史数据里公共书签的 icon 曾被写死为自绘 SVG（/api/preset-icon），
     // 这里统一改回网站自身的真实 favicon；用户自行上传/填写的自定义图标原样保留。
     // 这样不必改写任何用户数据，旧快照、导入的旧备份也能一起升级。
-    if (!cur || cur.indexOf('/api/preset-icon') === 0) {
+    // 需要重建的旧图标：空 / 自绘 SVG 遗留 / 旧 /api/icon 但没带 url 参数
+    // （缺 url 就无法把内网域名识别成 http，必须补上完整地址重新生成）
+    const staleIcon = !cur || cur.indexOf('/api/preset-icon') === 0 ||
+      (cur.indexOf('/api/icon?') === 0 && cur.indexOf('url=') < 0);
+    if (staleIcon) {
       const host = hostKey(b.url);
+      // 带上完整 url（含协议+端口）：内网域名/本地服务需要据此判断用 http 还是 https，
+      // 只传 host 会让内网域名被误判为公网而走 https 抓取失败。
       return host ? '/api/icon?host=' + encodeURIComponent(host) +
-        '&title=' + encodeURIComponent(String(b.title || '')) : '';
+        '&title=' + encodeURIComponent(String(b.title || '')) +
+        '&url=' + encodeURIComponent(String(b.url || '')) : '';
     }
     return cur;
   }
@@ -942,9 +949,10 @@
               if ($u.value.trim()) {
                 const host = hostKey(normalizeUrl($u.value));
                 try {
-                  await API.refreshIcon(normalizeUrl($u.value));
-                } catch (_) {}
-                b.icon = '/api/icon?host=' + encodeURIComponent(host) + '&t=' + Date.now();
+                await API.refreshIcon(normalizeUrl($u.value));
+              } catch (_) {}
+              b.icon = '/api/icon?host=' + encodeURIComponent(host) +
+                '&url=' + encodeURIComponent(normalizeUrl($u.value)) + '&t=' + Date.now();
                 paintIcon();
                 toast('已尝试重新抓取图标');
               }
@@ -1811,7 +1819,8 @@
           icon: IC.refresh,
           run: async () => {
             await API.refreshIcon(normalizeUrl(b.url));
-            b.icon = '/api/icon?host=' + encodeURIComponent(hostKey(b.url)) + '&t=' + Date.now();
+            b.icon = '/api/icon?host=' + encodeURIComponent(hostKey(b.url)) +
+              '&url=' + encodeURIComponent(normalizeUrl(b.url)) + '&t=' + Date.now();
             scheduleSave();
             render();
             toast('图标已刷新');
@@ -2439,7 +2448,8 @@
           title: title,
           url: url,
           desc: desc,
-          icon: "/api/icon?host=" + encodeURIComponent(h) + "&title=" + encodeURIComponent(title),
+          icon: "/api/icon?host=" + encodeURIComponent(h) + "&title=" + encodeURIComponent(title) +
+                "&url=" + encodeURIComponent(normalizeUrl(url)),
           order: order,
           createdAt: new Date().toISOString(),
           clickCount: 0

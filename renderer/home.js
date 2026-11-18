@@ -264,7 +264,8 @@
       const title = String(b.title || hostOf(url));
       const h = hueOf(hostOf(url) || title);
       const grad = `linear-gradient(135deg, hsl(${h} 58% 54%), hsl(${(h + 42) % 360} 64% 40%))`;
-      const icon = '/api/icon?host=' + encodeURIComponent(hostOf(url)) + '&title=' + encodeURIComponent(title);
+      const icon = '/api/icon?host=' + encodeURIComponent(hostOf(url)) + '&title=' + encodeURIComponent(title) +
+        '&url=' + encodeURIComponent(url);
       return `<a class="quick-chip" href="${esc(url)}" target="_blank" rel="noopener noreferrer">
         <img src="${esc(icon)}" alt="" data-grad="${esc(grad)}" data-letter="${esc(title.charAt(0).toUpperCase())}">
         <span>${esc(title)}</span></a>`;
