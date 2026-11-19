@@ -1675,6 +1675,10 @@
   }
 
   /* ================= 右键菜单 ================= */
+  // 移动端长按弹出菜单后，浏览器仍会补发一次 click；用它吞掉，避免误打开书签。
+  // 用时间戳而非布尔：即便某浏览器不补发 click，超时后自动失效，不会误吞下一次正常点击。
+  let suppressClickUntil = 0;
+
   function showCtx(x, y, items) {
     const menu = $('#ctxMenu');
     menu.innerHTML = items
@@ -1725,6 +1729,74 @@
     }
     items.push({ sep: true });
     items.push({ key: 'delg', label: '删除分类', icon: IC.trash, danger: true, run: () => deleteGroup(gid) });
+    return items;
+  }
+
+  /**
+   * 书签卡片右键菜单项：桌面右键与移动端长按共用同一套，保证功能一致。
+   */
+  function bookmarkCtxItems(b) {
+    const others = orderedGroups().filter((g) => g.id !== b.groupId);
+    const items = [
+      { key: 'open', label: '打开', icon: IC.open, run: () => openBookmark(b) },
+      { key: 'edit', label: '编辑…', icon: IC.edit, run: () => openBookmarkDialog(b) },
+      { key: 'copy', label: '复制网址', icon: IC.copy, run: () => API.copy(normalizeUrl(b.url)).then(() => toast('已复制网址')) },
+      { key: 'copyTitle', label: '复制名称', run: () => API.copy(b.title).then(() => toast('已复制名称')) },
+      { sep: true }
+    ];
+    if (others.length) {
+      items.push({
+        key: 'move',
+        label: '移动到分组',
+        icon: IC.move,
+        run: () => {
+          showModal({
+            title: '移动到分组',
+            width: 380,
+            body: `<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:8px">${others
+              .map((g) => `<button class="btn" style="justify-content:flex-start" data-mv="${esc(g.id)}">${esc(g.name)}</button>`)
+              .join('')}</div>`,
+            foot: `<button class="btn ghost" data-cancel>取消</button>`,
+            onMount: (m, close) => {
+              m.querySelector('[data-cancel]').onclick = close;
+              m.querySelectorAll('[data-mv]').forEach((btn) => {
+                btn.onclick = () => {
+                  moveBookmark(b.id, btn.dataset.mv, 9999);
+                  close();
+                };
+              });
+            }
+          });
+        }
+      });
+    }
+    items.push({
+      key: 'size',
+      label: '图标尺寸…',
+      icon: IC.resize,
+      run: () => openSizeDialog(b)
+    });
+    items.push({
+      key: 'bg',
+      label: '图标背景色…',
+      icon: IC.palette,
+      run: () => openBgDialog(b)
+    });
+    items.push({
+      key: 'refetch',
+      label: '重新抓取图标',
+      icon: IC.refresh,
+      run: async () => {
+        await API.refreshIcon(normalizeUrl(b.url));
+        b.icon = '/api/icon?host=' + encodeURIComponent(hostKey(b.url)) +
+          '&url=' + encodeURIComponent(normalizeUrl(b.url)) + '&t=' + Date.now();
+        scheduleSave();
+        render();
+        toast('图标已刷新');
+      }
+    });
+    items.push({ sep: true });
+    items.push({ key: 'del', label: '删除', icon: IC.trash, danger: true, run: () => deleteBookmark(b.id) });
     return items;
   }
 
@@ -1815,6 +1887,12 @@
 
     // 主区域：卡片点击 / 分组动作
     $('#main').addEventListener('click', (e) => {
+      // 移动端长按弹菜单后会补发 click，吞掉这一次以免误打开书签
+      if (Date.now() < suppressClickUntil) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
       const actBtn = e.target.closest('[data-act]');
       if (actBtn) {
         e.stopPropagation();
@@ -1840,68 +1918,7 @@
       if (card) {
         const b = S.bookmarks.find((x) => x.id === card.dataset.id);
         if (!b) return;
-        const others = orderedGroups().filter((g) => g.id !== b.groupId);
-        const items = [
-          { key: 'open', label: '打开', icon: IC.open, run: () => openBookmark(b) },
-          { key: 'edit', label: '编辑…', icon: IC.edit, run: () => openBookmarkDialog(b) },
-          { key: 'copy', label: '复制网址', icon: IC.copy, run: () => API.copy(normalizeUrl(b.url)).then(() => toast('已复制网址')) },
-          { key: 'copyTitle', label: '复制名称', run: () => API.copy(b.title).then(() => toast('已复制名称')) },
-          { sep: true }
-        ];
-        if (others.length) {
-          items.push({
-            key: 'move',
-            label: '移动到分组',
-            icon: IC.move,
-            run: () => {
-              showModal({
-                title: '移动到分组',
-                width: 380,
-                body: `<div style="display:flex;flex-direction:column;gap:6px;padding-bottom:8px">${others
-                  .map((g) => `<button class="btn" style="justify-content:flex-start" data-mv="${esc(g.id)}">${esc(g.name)}</button>`)
-                  .join('')}</div>`,
-                foot: `<button class="btn ghost" data-cancel>取消</button>`,
-                onMount: (m, close) => {
-                  m.querySelector('[data-cancel]').onclick = close;
-                  m.querySelectorAll('[data-mv]').forEach((btn) => {
-                    btn.onclick = () => {
-                      moveBookmark(b.id, btn.dataset.mv, 9999);
-                      close();
-                    };
-                  });
-                }
-              });
-            }
-          });
-        }
-        items.push({
-          key: 'size',
-          label: '图标尺寸…',
-          icon: IC.resize,
-          run: () => openSizeDialog(b)
-        });
-        items.push({
-          key: 'bg',
-          label: '图标背景色…',
-          icon: IC.palette,
-          run: () => openBgDialog(b)
-        });
-        items.push({
-          key: 'refetch',
-          label: '重新抓取图标',
-          icon: IC.refresh,
-          run: async () => {
-            await API.refreshIcon(normalizeUrl(b.url));
-            b.icon = '/api/icon?host=' + encodeURIComponent(hostKey(b.url)) +
-              '&url=' + encodeURIComponent(normalizeUrl(b.url)) + '&t=' + Date.now();
-            scheduleSave();
-            render();
-            toast('图标已刷新');
-          }
-        });
-        items.push({ sep: true });
-        items.push({ key: 'del', label: '删除', icon: IC.trash, danger: true, run: () => deleteBookmark(b.id) });
-        return showCtx(e.clientX, e.clientY, items);
+        return showCtx(e.clientX, e.clientY, bookmarkCtxItems(b));
       }
       if (head) {
         const gid = head.dataset.gid;
@@ -1934,6 +1951,84 @@
         showCtx(e.clientX, e.clientY, groupCtxItems(g));
       });
     }
+
+    /* ---------- 移动端长按 → 弹出与右键相同的菜单 ---------- */
+    const LONG_PRESS_MS = 480;
+    const MOVE_TOL = 10;
+    let lpTimer = null;
+    let lpStart = null;
+
+    // 空白处菜单项（右键 / 长按共用）
+    function blankCtxItems() {
+      return [
+        { key: 'newb', label: '新建书签', icon: IC.plus, run: () => openBookmarkDialog(null, UI.tab !== 'all' ? UI.tab : undefined) },
+        { key: 'newg', label: '新建分组', icon: IC.plus, run: () => openGroupDialog(null) },
+        { sep: true },
+        { key: 'refresh', label: '刷新界面', icon: IC.refresh, run: () => render() }
+      ];
+    }
+
+    // 根据触摸起点元素，弹出对应菜单（与 contextmenu 分支一一对应）
+    function openCtxAtTarget(target, x, y, fromSidebar) {
+      hideCtx();
+      if (fromSidebar) {
+        const item = target.closest('.side-item[data-key]');
+        if (!item || item.dataset.key === '__add') return false;
+        const g = S.groups.find((x2) => x2.id === item.dataset.key);
+        if (!g) return false;
+        showCtx(x, y, groupCtxItems(g));
+        return true;
+      }
+      const card = target.closest('.card[data-id]');
+      const head = target.closest('.group-head');
+      if (card) {
+        const b = S.bookmarks.find((x2) => x2.id === card.dataset.id);
+        if (!b) return false;
+        showCtx(x, y, bookmarkCtxItems(b));
+        return true;
+      }
+      if (head) {
+        const g = S.groups.find((x2) => x2.id === head.dataset.gid);
+        if (!g) return false;
+        showCtx(x, y, groupCtxItems(g));
+        return true;
+      }
+      showCtx(x, y, blankCtxItems());
+      return true;
+    }
+
+    // 给一个容器绑定长按手势；onlyTouch 时不拦鼠标，桌面仍走原生 contextmenu
+    function bindLongPress(host, fromSidebar) {
+      if (!host) return;
+      const clear = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } lpStart = null; };
+      host.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return clear();
+        const t = e.touches[0];
+        lpStart = { x: t.clientX, y: t.clientY, target: e.target };
+        lpTimer = setTimeout(() => {
+          if (!lpStart) return;
+          const s = lpStart;
+          lpStart = null;
+          lpTimer = null;
+          if (openCtxAtTarget(s.target, s.x, s.y, fromSidebar)) {
+            suppressClickUntil = Date.now() + 700;
+            try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {}
+          }
+        }, LONG_PRESS_MS);
+      }, { passive: true });
+      host.addEventListener('touchmove', (e) => {
+        if (!lpStart || e.touches.length !== 1) return;
+        const t = e.touches[0];
+        if (Math.abs(t.clientX - lpStart.x) > MOVE_TOL || Math.abs(t.clientY - lpStart.y) > MOVE_TOL) clear();
+      }, { passive: true });
+      host.addEventListener('touchend', () => {
+        clear();
+        // 若长按已触发并设置了抑制，保留到随后的 click 吞掉；否则无需处理
+      }, { passive: true });
+      host.addEventListener('touchcancel', clear, { passive: true });
+    }
+    bindLongPress($('#main'), false);
+    bindLongPress($('#sidebar'), true);
 
     document.addEventListener('click', () => hideCtx());
     window.addEventListener('blur', () => hideCtx());

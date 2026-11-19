@@ -515,6 +515,14 @@ button, input, select, textarea { font-family: inherit; }
 .ctx-sep { height: 1px; background: var(--line); margin: 4px 6px; }
 .ctx-item .k { margin-left: auto; font-size: 10px; color: var(--text-3); }
 
+/* 阶段19：移动端长按菜单——加大触摸目标，避免手指点不准 */
+@media (pointer: coarse), (max-width: 820px) {
+  .ctx { min-width: 210px; padding: 6px; }
+  .ctx-item { height: 42px; font-size: 13.5px; padding: 0 12px; gap: 11px; }
+  .ctx-item svg { width: 17px; height: 17px; }
+  .ctx-sep { margin: 5px 6px; }
+}
+
 /* ============ 弹窗 ============ */
 .mask {
   position: fixed;
