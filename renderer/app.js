@@ -1678,6 +1678,9 @@
   // 移动端长按弹出菜单后，浏览器仍会补发一次 click；用它吞掉，避免误打开书签。
   // 用时间戳而非布尔：即便某浏览器不补发 click，超时后自动失效，不会误吞下一次正常点击。
   let suppressClickUntil = 0;
+  // 移动端长按弹出菜单后，抬手合成的 click/其他路径会调 hideCtx 把菜单关掉。
+  // 长按后短暂锁定菜单，保证用户抬手后还能点到菜单项；菜单项点击用 force 强制关闭。
+  let ctxLockUntil = 0;
 
   function showCtx(x, y, items) {
     const menu = $('#ctxMenu');
@@ -1697,13 +1700,14 @@
       el.onclick = (e) => {
         e.stopPropagation();
         const item = items.find((i) => i.key === el.dataset.k);
-        hideCtx();
+        hideCtx(true); // 菜单项点击强制关闭，不受长按锁定影响
         if (item && item.run) item.run();
       };
     });
   }
 
-  function hideCtx() {
+  function hideCtx(force) {
+    if (!force && Date.now() < ctxLockUntil) return;
     $('#ctxMenu').classList.add('hidden');
   }
 
@@ -2012,6 +2016,7 @@
           lpTimer = null;
           if (openCtxAtTarget(s.target, s.x, s.y, fromSidebar)) {
             suppressClickUntil = Date.now() + 700;
+            ctxLockUntil = Date.now() + 1200; // 抬手后菜单保留 1.2s，足够用户点菜单项
             try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {}
           }
         }, LONG_PRESS_MS);

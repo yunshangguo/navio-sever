@@ -69,6 +69,11 @@ ck('#main click 检查并吞掉补发 click',
   /Date\.now\(\)\s*<\s*suppressClickUntil[\s\S]{0,120}stopPropagation\(\)/.test(app));
 ck('document click 在抑制窗口内不关闭菜单（抬手后菜单保留可点）',
   /addEventListener\(['"]click['"]\s*,\s*\(\)\s*=>\s*\{\s*if\s*\(Date\.now\(\)\s*<\s*suppressClickUntil\)\s*return;\s*hideCtx\(\)/.test(app));
+ck('菜单锁定 ctxLockUntil 存在且长按后设置',
+  /ctxLockUntil\s*=\s*0/.test(app) && /ctxLockUntil\s*=\s*Date\.now\(\)\s*\+/.test(app));
+ck('hideCtx 在锁定窗口内不关闭（force 除外）',
+  /function\s+hideCtx\(force\)[\s\S]{0,120}if\s*\(!force\s*&&\s*Date\.now\(\)\s*<\s*ctxLockUntil\)\s*return/.test(app));
+ck('菜单项点击用 force 强制关闭', /hideCtx\(true\)/.test(app));
 
 /* ---------- 4. 触摸反馈 ---------- */
 ck('长按触发震动反馈 navigator.vibrate', /navigator\.vibrate/.test(app));
