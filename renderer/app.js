@@ -2030,7 +2030,12 @@
     bindLongPress($('#main'), false);
     bindLongPress($('#sidebar'), true);
 
-    document.addEventListener('click', () => hideCtx());
+    // 抑制窗口内不关闭菜单：移动端长按后补发的 click 会走到这里，
+    // 若此时 hideCtx 会把刚弹出的菜单立即关掉，用户根本点不到菜单项。
+    document.addEventListener('click', () => {
+      if (Date.now() < suppressClickUntil) return;
+      hideCtx();
+    });
     window.addEventListener('blur', () => hideCtx());
 
     // 拖拽

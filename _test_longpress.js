@@ -67,6 +67,8 @@ ck('时间戳抑制变量 suppressClickUntil 存在', /suppressClickUntil\s*=\s*
 ck('长按触发时设置抑制截止时间', /suppressClickUntil\s*=\s*Date\.now\(\)\s*\+/.test(app));
 ck('#main click 检查并吞掉补发 click',
   /Date\.now\(\)\s*<\s*suppressClickUntil[\s\S]{0,120}stopPropagation\(\)/.test(app));
+ck('document click 在抑制窗口内不关闭菜单（抬手后菜单保留可点）',
+  /addEventListener\(['"]click['"]\s*,\s*\(\)\s*=>\s*\{\s*if\s*\(Date\.now\(\)\s*<\s*suppressClickUntil\)\s*return;\s*hideCtx\(\)/.test(app));
 
 /* ---------- 4. 触摸反馈 ---------- */
 ck('长按触发震动反馈 navigator.vibrate', /navigator\.vibrate/.test(app));
