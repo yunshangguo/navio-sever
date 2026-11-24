@@ -523,6 +523,27 @@ button, input, select, textarea { font-family: inherit; }
   .ctx-sep { margin: 5px 6px; }
 }
 
+/* 阶段20：iOS Safari 原生长按（callout 菜单 / 文本放大镜 / 选字）会抢占自定义长按，
+   只识别到系统菜单。对可长按目标显式关掉系统行为，让 touchstart 定时器接管。
+   注意 body 已有 user-select:none，但 iOS 对 img/a/button 仍需单独声明才生效。 */
+@media (pointer: coarse) {
+  .card, .card *,
+  .group-head, .group-head *,
+  .side-item, .side-item *,
+  .side-nav, .side-scroll {
+    -webkit-touch-callout: none; /* 关键：禁掉 iOS「存储图像/拷贝链接/查询」系统菜单 */
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* 图标 img 不接收指针，触摸落到 .card 上；否则长按图片会弹「存储图像」 */
+  .card .ico img,
+  .side-item img {
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
+}
+
 /* ============ 弹窗 ============ */
 .mask {
   position: fixed;

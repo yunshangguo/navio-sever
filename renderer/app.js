@@ -264,6 +264,11 @@
   const UI = { tab: null, q: '', drawer: false, ctxFor: null };
   let saveTimer = null;
   let pendingSave = false;
+  // 多视图同步：服务端按身份维护 rev，前端轮询/广播比对，变化才全量刷新。
+  let currentRev = 0;      // 本页已知的服务端版本号
+  let syncing = false;     // 防止并发的同步检查重叠
+  let syncTimer = null;    // 轮询定时器
+  const SYNC_POLL_MS = 2500;
 
   /* ================= 持久化 ================= */
   function scheduleSave() {
@@ -272,12 +277,20 @@
     saveTimer = setTimeout(doSave, 700);
   }
 
+  /** 保存响应里带回 rev 时更新本地基准并广播给其它标签页 */
+  function noteSaved(r) {
+    if (r && typeof r.rev === 'number') currentRev = r.rev;
+    if (window.navioSync && window.navioSync.broadcast) window.navioSync.broadcast(currentRev);
+  }
+
   async function doSave() {
     if (!pendingSave || !S) return;
     pendingSave = false;
     try {
-      await API.saveState(S);
+      const r = await API.saveState(S);
+      noteSaved(r);
     } catch (e) {
+      pendingSave = true; // 保存失败：保留待保存标记，等待下次重试，避免数据丢失
       toast('保存失败：' + e.message);
     }
   }
@@ -285,9 +298,68 @@
   async function flush() {
     clearTimeout(saveTimer);
     try {
-      await API.flush(S);
+      const r = await API.flush(S);
+      noteSaved(r);
       pendingSave = false;
     } catch (_) {}
+  }
+
+  /* ================= 多视图同步 ================= */
+  /** 当前是否允许自动刷新：本地无未保存改动、无正在编辑/交互、页面在前台 */
+  function canAutoSync() {
+    if (pendingSave || !S) return false;                 // 本地有改动未落盘，绝不覆盖
+    if (document.hidden || document.visibilityState === 'hidden') return false;
+    if (UI.drawer) return false;                         // 设置抽屉打开
+    if ($('#drawerMask') && !$('#drawerMask').classList.contains('hidden')) return false;
+    if ($('#modalRoot') && $('#modalRoot').children.length) return false; // 有弹窗正在编辑
+    const ctx = $('#ctxMenu');
+    if (ctx && !ctx.classList.contains('hidden')) return false;           // 右键/长按菜单打开
+    if (typeof DRAG !== 'undefined' && DRAG) return false;                // 正在拖拽
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.isContentEditable)) return false; // 正在输入
+    return true;
+  }
+
+  /**
+   * 比对服务端 rev，变化则全量刷新。由轮询与 BroadcastChannel 共同触发。
+   * @param {number} [hintRev] 广播带来的版本号提示；若 <= currentRev 可跳过探测
+   */
+  async function checkSync(hintRev) {
+    if (!canAutoSync() || syncing || typeof API.stateRev !== 'function') return;
+    if (typeof hintRev === 'number' && hintRev <= currentRev) return;
+    syncing = true;
+    try {
+      const r = await API.stateRev();
+      const rev = r && r.rev;
+      if (typeof rev === 'number' && rev > currentRev) {
+        // 保留当前界面状态：选中分类、搜索词、滚动位置
+        const keepTab = UI.tab;
+        const keepQ = $('#searchInput') ? $('#searchInput').value : UI.q;
+        const keepScroll = $('#main') ? $('#main').scrollTop : 0;
+        await reload();
+        UI.tab = keepTab;
+        if ($('#searchInput') && keepQ) $('#searchInput').value = keepQ;
+        if ($('#main')) $('#main').scrollTop = keepScroll;
+        toast('已同步最新数据');
+      } else if (typeof rev === 'number' && rev > 0) {
+        currentRev = rev; // 别处 rev 回退/重启，对齐基准即可，不刷新
+      }
+    } catch (_) {
+      // 网络抖动忽略，下一轮再试
+    } finally {
+      syncing = false;
+    }
+  }
+
+  function startAutoSync() {
+    if (syncTimer) clearInterval(syncTimer);
+    syncTimer = setInterval(() => checkSync(), SYNC_POLL_MS);
+    // 页面重新可见时立即比对一次（切回来就能看到别人改的数据）
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) checkSync();
+    });
+    // 同浏览器其它标签页保存后即时通知
+    window.__navioOnPeerChange = (hintRev) => checkSync(hintRev);
   }
 
   /* ================= Toast ================= */
@@ -516,62 +588,11 @@
     if (UI.q) runSearch(UI.q, false);
   }
 
-  /* ================= 搜索 ================= */
-  let searchHits = [];
-
+  /* ================= 搜索：纯网络搜索 =================
+   * 搜索框只是联网搜索入口：输入内容时不筛选、不隐藏书签栏、不弹任何结果面板，
+   * 页面保持原样。只有回车（submitSearch）才真正打开搜索引擎或网址。 */
   function runSearch(q, focus = true) {
     UI.q = q;
-    const box = $('#searchResults');
-    const secs = $('#sections');
-    if (!q.trim()) {
-      box.classList.add('hidden');
-      box.innerHTML = '';
-      secs.classList.remove('hidden');
-      searchHits = [];
-      return;
-    }
-    secs.classList.add('hidden');
-    box.classList.remove('hidden');
-    const kw = q.trim().toLowerCase();
-    searchHits = S.bookmarks
-      .map((b) => {
-        const g = S.groups.find((x) => x.id === b.groupId);
-        const hay = (b.title + ' ' + b.url + ' ' + (b.desc || '') + ' ' + (g ? g.name : '')).toLowerCase();
-        if (!hay.includes(kw)) return null;
-        let score = 0;
-        if ((b.title || '').toLowerCase().startsWith(kw)) score += 100;
-        else if ((b.title || '').toLowerCase().includes(kw)) score += 60;
-        if ((b.url || '').toLowerCase().includes(kw)) score += 20;
-        score += (b.clickCount || 0) * 0.5;
-        return { b, score };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 80)
-      .map((x) => x.b);
-
-    const urlHint = looksLikeUrl(q)
-      ? `<div class="sr-head" style="margin-bottom:8px">直接访问 <b>${esc(normalizeUrl(q))}</b> · 回车打开</div>`
-      : '';
-    const eng = engineById(S.settings.searchEngine);
-    const webKw = q.trim();
-    const webBtn =
-      '<div class="sr-web">' +
-        '<button class="sr-web-btn" type="button" data-web="1" data-q="' + esc(webKw) + '">' +
-          '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>' +
-          '<span>用 <b>' + esc(eng.name) + '</b> 联网搜索「<em>' + esc(webKw) + '</em>」</span>' +
-          '<span class="sr-web-go">↗</span>' +
-        '</button>' +
-        '<div class="sr-web-tip">回车仍打开第一个匹配书签 · 点此直接用 ' + esc(eng.name) +
-          ' 搜索 · 可在搜索框左侧切换引擎</div>' +
-      '</div>';
-    const list = searchHits.map(cardHTML).join('');
-    box.innerHTML =
-      urlHint +
-      webBtn +
-      `<div class="sr-head">找到 <b>${searchHits.length}</b> 个书签${searchHits.length ? '' : '，回车将自动联网搜索'}</div>` +
-      `<div class="grid">${list}</div>`;
-    if (focus) $('#searchInput').focus();
   }
 
   function submitSearch() {
@@ -579,10 +600,6 @@
     if (!q) return;
     if (looksLikeUrl(q)) {
       openUrl(normalizeUrl(q));
-      return;
-    }
-    if (searchHits.length) {
-      openBookmark(searchHits[0]);
       return;
     }
     openUrl(engineUrl(S.settings.searchEngine) + encodeURIComponent(q));
@@ -1681,6 +1698,10 @@
   // 移动端长按弹出菜单后，抬手合成的 click/其他路径会调 hideCtx 把菜单关掉。
   // 长按后短暂锁定菜单，保证用户抬手后还能点到菜单项；菜单项点击用 force 强制关闭。
   let ctxLockUntil = 0;
+  // iOS Safari 长按住目标约 500ms 后会补发一次 contextmenu（即便已 preventDefault 系统菜单），
+  // 若不再识别会用 e.clientX/clientY（iOS 上常为 0,0）重弹菜单，覆盖长按刚弹出的正确菜单。
+  // 记录长按触发时刻，在窗口内只吞掉 contextmenu、不重弹。
+  let lastLongPressAt = 0;
 
   function showCtx(x, y, items) {
     const menu = $('#ctxMenu');
@@ -1869,14 +1890,8 @@
       }
     });
 
-    // 搜索引擎下拉 + 结果页联网按钮
+    // 搜索引擎下拉
     initEnginePicker();
-    $('#searchResults').addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-web]');
-      if (!btn) return;
-      const qw = btn.getAttribute('data-q') || si.value.trim();
-      if (qw) openUrl(engineUrl(S.settings.searchEngine) + encodeURIComponent(qw));
-    });
 
     // 分组标签
     $('#groupTabs').addEventListener('click', (e) => {
@@ -1915,6 +1930,8 @@
 
     // 右键菜单
     $('#main').addEventListener('contextmenu', (e) => {
+      // iOS 长按补发的 contextmenu：只吞掉，不重弹（长按菜单已用正确触点坐标弹出）
+      if (Date.now() - lastLongPressAt < 1200) { e.preventDefault(); return; }
       const card = e.target.closest('.card[data-id]');
       const head = e.target.closest('.group-head');
       e.preventDefault();
@@ -1943,6 +1960,7 @@
     const sidebar = $('#sidebar');
     if (sidebar) {
       sidebar.addEventListener('contextmenu', (e) => {
+        if (Date.now() - lastLongPressAt < 1200) { e.preventDefault(); return; }
         const item = e.target.closest('.side-item[data-key]');
         if (!item) return;
         e.preventDefault();
@@ -2009,17 +2027,23 @@
         if (e.touches.length !== 1) return clear();
         const t = e.touches[0];
         lpStart = { x: t.clientX, y: t.clientY, target: e.target };
-        lpTimer = setTimeout(() => {
-          if (!lpStart) return;
-          const s = lpStart;
-          lpStart = null;
-          lpTimer = null;
-          if (openCtxAtTarget(s.target, s.x, s.y, fromSidebar)) {
-            suppressClickUntil = Date.now() + 700;
-            ctxLockUntil = Date.now() + 1200; // 抬手后菜单保留 1.2s，足够用户点菜单项
-            try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {}
-          }
-        }, LONG_PRESS_MS);
+          lpTimer = setTimeout(() => {
+            if (!lpStart) return;
+            const s = lpStart;
+            lpStart = null;
+            lpTimer = null;
+            // iOS Safari 长按时可能已选中文字并弹出放大镜/callout，主动清掉选择与失焦
+            try {
+              const sel = window.getSelection();
+              if (sel && sel.removeAllRanges) sel.removeAllRanges();
+            } catch (_) {}
+            if (openCtxAtTarget(s.target, s.x, s.y, fromSidebar)) {
+              lastLongPressAt = Date.now();
+              suppressClickUntil = Date.now() + 700;
+              ctxLockUntil = Date.now() + 1200; // 抬手后菜单保留 1.2s，足够用户点菜单项
+              try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {}
+            }
+          }, LONG_PRESS_MS);
       }, { passive: true });
       host.addEventListener('touchmove', (e) => {
         if (!lpStart || e.touches.length !== 1) return;
@@ -2860,6 +2884,7 @@
     const r = await API.readState();
     S = r.state;
     DATA_DIR = r.dataDir;
+    if (r && typeof r.rev === 'number') currentRev = r.rev;
     render();
     renderWidgets();
     applySearchVisible();
@@ -2876,6 +2901,7 @@
       const r = await API.readState();
       S = r.state;
       DATA_DIR = r.dataDir;
+      if (r && typeof r.rev === 'number') currentRev = r.rev;
       seedIfEmpty();
       bindEvents();
       render();
@@ -2884,6 +2910,7 @@
       applyClockVisible();
       tickClock();
       setInterval(tickClock, 10000);
+      startAutoSync(); // 多标签/多设备数据同步
       if (r.meta && r.meta.loadFrom && !['data.json', 'empty'].includes(r.meta.loadFrom)) {
         toast('已从备份恢复数据：' + r.meta.loadFrom, 4000);
       }

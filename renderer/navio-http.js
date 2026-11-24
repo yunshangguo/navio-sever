@@ -114,6 +114,8 @@
   window.navio = {
     // ---- 数据 ----
     readState: () => call('/state'),
+    // 轻量版本探测：只取 rev，不改数据，供多标签/多设备同步轮询
+    stateRev: () => call('/state/rev'),
     saveState: (state) => call('/state', state),
     flush: (state) => {
       // 关页/切后台时尽量保证落盘
@@ -235,6 +237,30 @@
   };
 
   document.documentElement.classList.add('web-mode');
+
+  /* ---------- 多标签页即时同步（同一浏览器内）----------
+     保存/刷新后广播一个信号，其它标签页收到后立刻走 /api/state/rev 比对，
+     比纯轮询更快。跨设备则靠 app.js 的定时轮询。 */
+  const CHANNEL = 'navio-state-sync';
+  let bc = null;
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      bc = new BroadcastChannel(CHANNEL);
+      bc.onmessage = (ev) => {
+        const d = ev && ev.data;
+        if (d && d.type === 'changed' && typeof window.__navioOnPeerChange === 'function') {
+          window.__navioOnPeerChange(d.rev);
+        }
+      };
+    }
+  } catch (_) {}
+  window.navioSync = {
+    /** 本页数据已变更，通知其它标签页（等本地落盘后再调用） */
+    broadcast: (rev) => {
+      if (!bc) return;
+      try { bc.postMessage({ type: 'changed', rev: rev || 0, at: Date.now() }); } catch (_) {}
+    }
+  };
 
   /** 顶部账号条：显示当前用户、改密、退出 */
   async function initWebBar() {

@@ -85,6 +85,22 @@ ck('移动端 .ctx-item 高度放大到 >=40px',
 ck('移动端 .ctx min-width 放大',
   /@media\s*\([^)]*coarse[^)]*\)[\s\S]{0,200}\.ctx\s*\{[^}]*min-width/.test(css));
 
+/* ---------- 6. iOS Safari 原生长按冲突修复 ---------- */
+ck('CSS 在 coarse 指针下禁用 -webkit-touch-callout（关键：苹果系统菜单）',
+  /-webkit-touch-callout:\s*none/.test(css));
+ck('CSS 对卡片/分类/分组头禁用 -webkit-user-select（防放大镜/选字）',
+  /\.card[^{}]*\.side-item[\s\S]{0,400}-webkit-user-select:\s*none/.test(css) ||
+  /-webkit-user-select:\s*none[\s\S]{0,400}\.side-item/.test(css));
+ck('CSS 让图标 img 的 pointer-events:none（触摸落到卡片，防「存储图像」）',
+  /\.card\s+\.ico\s+img[\s\S]{0,120}pointer-events:\s*none/.test(css));
+ck('lastLongPressAt 时间戳变量存在', /lastLongPressAt\s*=\s*0/.test(app));
+ck('contextmenu 长按去重守卫（吞掉 iOS 补发的 contextmenu）',
+  /Date\.now\(\)\s*-\s*lastLongPressAt\s*<\s*\d+[\s\S]{0,40}e\.preventDefault\(\);\s*return/.test(app));
+ck('长按触发时记录 lastLongPressAt',
+  /lastLongPressAt\s*=\s*Date\.now\(\)/.test(app));
+ck('长按触发时清除文本选择 removeAllRanges',
+  /removeAllRanges\(\)/.test(app));
+
 /* ---------- 汇总 ---------- */
 const pass = results.filter((r) => r.ok).length;
 const fail = results.length - pass;

@@ -117,6 +117,21 @@ class Spaces {
     // 未登录游客快照只存内存，进程重启即清空，永不写入 data.json。
     // key = anon_<32hex>，value = normalize 后的 state。
     this.volatiles = new Map();
+    // 每个身份的修改版本号：save/flush/reset 时递增，供多标签页/多设备同步比对。
+    // 只存内存、不落盘：服务重启后从 0 起算，前端首次拿到新 rev 会 reload 一次（无害）。
+    this.revs = new Map();
+  }
+
+  /** 取身份当前版本号（未改动过为 0） */
+  rev(identityId) {
+    const v = this.revs.get(String(identityId));
+    return typeof v === 'number' ? v : 0;
+  }
+
+  /** 身份数据发生一次修改，版本号 +1 */
+  bumpRev(identityId) {
+    const k = String(identityId);
+    this.revs.set(k, this.rev(k) + 1);
   }
 
   top() {
@@ -346,44 +361,47 @@ class Spaces {
   save(identityId, incoming) {
     const clean = normalize(incoming);
     delete clean.spaces; // 防止前端把整个视图（含 spaces）回传造成嵌套膨胀
+    this.bumpRev(identityId);
     if (this.isVolatileId(identityId)) {
       this.volatiles.set(identityId, clean);
-      return { ok: true, volatile: true };
+      return { ok: true, volatile: true, rev: this.rev(identityId) };
     }
     const st = this.store.state;
     st.spaces = st.spaces || {};
     st.spaces[identityId] = clean;
     this.store.save(st, 500);
-    return { ok: true };
+    return { ok: true, rev: this.rev(identityId) };
   }
 
   /** 立即保存（页面关闭 / 切后台）：游客只写内存，登录用户落盘 */
   flush(identityId, incoming) {
     const clean = normalize(incoming);
     delete clean.spaces;
+    this.bumpRev(identityId);
     if (this.isVolatileId(identityId)) {
       this.volatiles.set(identityId, clean);
-      return { ok: true, volatile: true };
+      return { ok: true, volatile: true, rev: this.rev(identityId) };
     }
     const st = this.store.state;
     st.spaces = st.spaces || {};
     st.spaces[identityId] = clean;
     this.store.saveSync(st);
-    return { ok: true };
+    return { ok: true, rev: this.rev(identityId) };
   }
 
   /** 丢弃个人快照，重新回到公共模板；游客只清内存 */
   reset(identityId) {
+    this.bumpRev(identityId);
     if (this.isVolatileId(identityId)) {
       this.volatiles.delete(identityId);
-      return { ok: true };
+      return { ok: true, rev: this.rev(identityId) };
     }
     const st = this.store.state;
     if (st.spaces && st.spaces[identityId]) {
       delete st.spaces[identityId];
       this.store.saveSync(st);
     }
-    return { ok: true };
+    return { ok: true, rev: this.rev(identityId) };
   }
 
   /** 个人空间数量（控制台 / 测试用） */

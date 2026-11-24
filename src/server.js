@@ -49,7 +49,7 @@ const MAX_BODY = 8 * 1024 * 1024;
 
 // 未登录游客可调用的接口（只读 / 个人视图）。备份、恢复、导入、宿主机探测等一律不放行。
 const PUBLIC_API = new Set([
-  '/api/state', '/api/state/flush', '/api/state/reset',
+  '/api/state', '/api/state/rev', '/api/state/flush', '/api/state/reset',
   '/api/weather', '/api/icon', '/api/title', '/api/preset-icon', '/api/preset-icons', '/api/preset-colors',
   '/api/auth/session', '/api/wall', '/api/copy', '/api/open-external',
   '/api/bookmarks/import-html', '/api/bookmarks/export-html'
@@ -633,6 +633,7 @@ class NavioServer {
       const meta = this.store.stats();
       return json(res, 200, {
         state: this.spaces.view(who.id), meta, dataDir: null,
+        rev: this.spaces.rev(who.id),
         user: sess ? sess.user : { id: who.id, username: who.name, role: 'guest' },
         identity: { id: who.id, kind: who.kind, name: who.name, admin: who.admin },
         publicMode: {
@@ -642,6 +643,10 @@ class NavioServer {
           hasSnapshot: this.spaces.hasSnapshotView(who.id)
         }
       });
+    }
+    // 轻量版本探测：只回当前身份的 rev，供前端轮询比对是否需要从 /api/state 全量刷新
+    if (pathname === '/api/state/rev' && method === 'GET') {
+      return json(res, 200, { ok: true, rev: this.spaces.rev(who.id) });
     }
     if (pathname === '/api/state' && method === 'POST') {
       if (guest && pcfg.anonymousEdit === false) return json(res, 401, { ok: false, code: 'need_login', error: '请先登录后再保存' });
